@@ -115,7 +115,11 @@ const NotasFiscais = () => {
           isText: true,
         })
       if (numeroFilter.trim())
-        andFilters.push({ column: 'numero_nota', value: numeroFilter.trim() })
+        andFilters.push({
+          column: 'numero_nota',
+          value: numeroFilter.trim(),
+          textCast: true,
+        })
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
         andFilters,
         eqColumn: statusFilter !== 'all' ? 'status' : undefined,

@@ -102,7 +102,12 @@ export async function fetchWithFilters<T>(
     valueMax?: number
     eqColumn?: string
     eqValue?: string
-    andFilters?: Array<{ column: string; value: string; isText?: boolean }>
+    andFilters?: Array<{
+      column: string
+      value: string
+      isText?: boolean
+      textCast?: boolean
+    }>
   },
 ): Promise<T[]> {
   let query = supabase.from(table).select('*')
@@ -153,7 +158,13 @@ export async function fetchWithFilters<T>(
   if (options.andFilters) {
     for (const filter of options.andFilters) {
       if (filter.value) {
-        if (filter.isText || textColumns.includes(filter.column)) {
+        if (filter.textCast) {
+          query = query.filter(
+            `${filter.column}::text`,
+            'ilike',
+            `%${filter.value}%`,
+          )
+        } else if (filter.isText || textColumns.includes(filter.column)) {
           query = query.ilike(filter.column, `%${filter.value}%`)
         } else {
           query = query.eq(filter.column, filter.value)
