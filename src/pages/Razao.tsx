@@ -41,8 +41,9 @@ import { RazaoForm } from '@/components/forms/RazaoForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { StatementViewDialog } from '@/components/StatementViewDialog'
 import { SearchableFilter } from '@/components/SearchableFilter'
-import { Razao } from '@/lib/types'
+import { Razao, PlanoConta } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
+import { auxiliaryService } from '@/services/auxiliaryService'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -67,6 +68,7 @@ const RazaoPage = () => {
   const [editItem, setEditItem] = useState<Razao | null>(null)
   const [viewItem, setViewItem] = useState<Razao | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
+  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
   const [filters, setFilters] = useState<RazaoFilters>({
     dateRange: undefined,
     conta: 'all',
@@ -81,7 +83,7 @@ const RazaoPage = () => {
         dateColumn: 'data',
         dateFrom: filters.dateRange?.from,
         dateTo: filters.dateRange?.to,
-        eqColumn: filters.conta !== 'all' ? 'conta' : undefined,
+        eqColumn: filters.conta !== 'all' ? 'plano_conta_id' : undefined,
         eqValue: filters.conta !== 'all' ? filters.conta : undefined,
       })
 
@@ -111,6 +113,13 @@ const RazaoPage = () => {
     return () => clearTimeout(timer)
   }, [loadData])
 
+  useEffect(() => {
+    auxiliaryService
+      .fetchPlanoContas()
+      .then(setPlanoContas)
+      .catch(() => {})
+  }, [])
+
   const handleCreate = () => {
     setEditItem(null)
     setFormOpen(true)
@@ -124,10 +133,16 @@ const RazaoPage = () => {
     setViewOpen(true)
   }
 
-  const uniqueContas = [...new Set(data.map((d) => d.conta))].map((c) => ({
-    value: c,
-    label: c,
+  const contaOptions = planoContas.map((p) => ({
+    value: String(p.id),
+    label: `${p.id} - ${p.descricao}`,
   }))
+
+  const getContaLabel = (planoContaId: number | null | undefined) => {
+    if (!planoContaId) return '-'
+    const pc = planoContas.find((p) => p.id === planoContaId)
+    return pc ? `${pc.id} - ${pc.descricao}` : String(planoContaId)
+  }
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -189,7 +204,7 @@ const RazaoPage = () => {
         </Popover>
 
         <SearchableFilter
-          options={uniqueContas}
+          options={contaOptions}
           value={filters.conta}
           onValueChange={(val) =>
             setFilters((prev) => ({ ...prev, conta: val }))
@@ -255,7 +270,7 @@ const RazaoPage = () => {
                     {new Date(item.data).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell className="font-mono text-sm font-semibold text-gray-900">
-                    {item.conta}
+                    {getContaLabel(item.plano_conta_id)}
                   </TableCell>
                   <TableCell className="text-gray-600">
                     {item.descricao}

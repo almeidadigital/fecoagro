@@ -35,12 +35,12 @@ import { toast } from 'sonner'
 
 const schema = z.object({
   data: z.string().min(1, 'Data é obrigatória'),
-  conta: z.string().min(1, 'Conta é obrigatória'),
-  descricao: z.string().min(2, 'Descrição é obrigatória'),
+  historico: z.string().min(2, 'Histórico é obrigatório'),
   debito: z.coerce.number().min(0, 'Débito deve ser >= 0'),
   credito: z.coerce.number().min(0, 'Crédito deve ser >= 0'),
   saldo: z.coerce.number(),
-  plano_conta_id: z.string().optional(),
+  plano_conta_id: z.string().min(1, 'Conta é obrigatória'),
+  lote: z.coerce.number().int().optional().nullable(),
 })
 
 interface Props {
@@ -65,12 +65,12 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
     resolver: zodResolver(schema),
     defaultValues: {
       data: new Date().toISOString().split('T')[0],
-      conta: '',
-      descricao: '',
+      historico: '',
       debito: 0,
       credito: 0,
       saldo: 0,
       plano_conta_id: '',
+      lote: null,
     },
   })
 
@@ -78,40 +78,44 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
     if (editItem) {
       form.reset({
         data: editItem.data,
-        conta: editItem.conta,
-        descricao: editItem.descricao,
+        historico: editItem.historico || editItem.descricao,
         debito: editItem.debito,
         credito: editItem.credito,
         saldo: editItem.saldo,
-        plano_conta_id: editItem.plano_conta_id || '',
+        plano_conta_id: editItem.plano_conta_id
+          ? String(editItem.plano_conta_id)
+          : '',
+        lote: editItem.lote ?? null,
       })
     } else {
       form.reset({
         data: new Date().toISOString().split('T')[0],
-        conta: '',
-        descricao: '',
+        historico: '',
         debito: 0,
         credito: 0,
         saldo: 0,
         plano_conta_id: '',
+        lote: null,
       })
     }
   }, [editItem, form, open])
 
-  const handlePlanoContaChange = (value: string) => {
-    form.setValue('plano_conta_id', value)
-    const selected = planoContas.find((p) => p.id === value)
-    if (selected?.classificacao) {
-      form.setValue('conta', selected.classificacao)
-    }
-  }
-
   async function onSubmit(values: z.infer<typeof schema>) {
     try {
       setSubmitting(true)
+      const selected = planoContas.find(
+        (p) => String(p.id) === values.plano_conta_id,
+      )
       const payload = {
-        ...values,
-        plano_conta_id: values.plano_conta_id || null,
+        data: values.data,
+        conta: selected?.classificacao || '',
+        descricao: values.historico,
+        historico: values.historico,
+        debito: values.debito,
+        credito: values.credito,
+        saldo: values.saldo,
+        plano_conta_id: Number(values.plano_conta_id),
+        lote: values.lote || null,
       }
       if (editItem) {
         await updateRecord('razao', editItem.id, payload)
@@ -149,9 +153,9 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
               name="plano_conta_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plano de Contas</FormLabel>
+                  <FormLabel>Conta</FormLabel>
                   <Select
-                    onValueChange={handlePlanoContaChange}
+                    onValueChange={field.onChange}
                     value={field.value || undefined}
                   >
                     <FormControl>
@@ -161,8 +165,8 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
                     </FormControl>
                     <SelectContent>
                       {planoContas.map((pc) => (
-                        <SelectItem key={pc.id} value={pc.id}>
-                          {pc.classificacao} — {pc.descricao}
+                        <SelectItem key={pc.id} value={String(pc.id)}>
+                          {pc.id} - {pc.descricao}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -171,40 +175,25 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="data"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="conta"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Conta</FormLabel>
-                    <FormControl>
-                      <Input placeholder="1.1.01.001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
             <FormField
               control={form.control}
-              name="descricao"
+              name="data"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel>Data</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="historico"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Histórico</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Descrição do lançamento..."
@@ -256,6 +245,28 @@ export function RazaoForm({ open, onOpenChange, editItem, onSuccess }: Props) {
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="lote"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lote</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="1"
+                      placeholder="Número do lote"
+                      value={field.value ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        field.onChange(val === '' ? null : parseInt(val, 10))
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <SheetFooter>
               <Button
                 type="submit"
