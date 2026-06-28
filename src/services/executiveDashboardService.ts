@@ -19,6 +19,13 @@ export interface MonthlyNotaData {
   count: number
 }
 
+export interface SupplierVolumeData {
+  fornecedor: string
+  total: number
+  count: number
+  percentage: number
+}
+
 export const executiveDashboardService = {
   async getKPIs(dateFrom?: Date, dateTo?: Date): Promise<ExecutiveKPIs> {
     const fromStr = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : undefined
@@ -115,5 +122,43 @@ export const executiveDashboardService = {
         count: val.count,
       }
     })
+  },
+
+  async getSupplierVolumes(
+    dateFrom?: Date,
+    dateTo?: Date,
+  ): Promise<SupplierVolumeData[]> {
+    const fromStr = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : undefined
+    const toStr = dateTo ? format(dateTo, 'yyyy-MM-dd') : undefined
+
+    let query = supabase.from('notas_fiscais').select('emissor, valor_total')
+    if (fromStr) query = query.gte('data_emissao', fromStr)
+    if (toStr) query = query.lte('data_emissao', toStr)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const supplierMap = new Map<string, { total: number; count: number }>()
+    const grandTotal = (data || []).reduce(
+      (s, n) => s + Number(n.valor_total),
+      0,
+    )
+
+    for (const row of data || []) {
+      const fornecedor = row.emissor || 'Sem Fornecedor'
+      const existing = supplierMap.get(fornecedor) || { total: 0, count: 0 }
+      existing.total += Number(row.valor_total)
+      existing.count += 1
+      supplierMap.set(fornecedor, existing)
+    }
+
+    return Array.from(supplierMap.entries())
+      .map(([fornecedor, val]) => ({
+        fornecedor,
+        total: val.total,
+        count: val.count,
+        percentage: grandTotal > 0 ? (val.total / grandTotal) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total)
   },
 }

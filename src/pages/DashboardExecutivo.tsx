@@ -36,7 +36,10 @@ import {
   executiveDashboardService,
   ExecutiveKPIs,
   MonthlyNotaData,
+  SupplierVolumeData,
 } from '@/services/executiveDashboardService'
+import { SupplierRanking } from '@/components/dashboard/SupplierRanking'
+import { SupplierVolumeList } from '@/components/dashboard/SupplierVolumeList'
 import { toast } from 'sonner'
 
 const DashboardExecutivo = () => {
@@ -47,20 +50,26 @@ const DashboardExecutivo = () => {
   })
   const [kpis, setKpis] = useState<ExecutiveKPIs | null>(null)
   const [monthlyData, setMonthlyData] = useState<MonthlyNotaData[]>([])
+  const [supplierData, setSupplierData] = useState<SupplierVolumeData[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [kpiData, monthly] = await Promise.all([
+      const [kpiData, monthly, suppliers] = await Promise.all([
         executiveDashboardService.getKPIs(dateRange?.from, dateRange?.to),
         executiveDashboardService.getMonthlyNotas(
+          dateRange?.from,
+          dateRange?.to,
+        ),
+        executiveDashboardService.getSupplierVolumes(
           dateRange?.from,
           dateRange?.to,
         ),
       ])
       setKpis(kpiData)
       setMonthlyData(monthly)
+      setSupplierData(suppliers)
     } catch {
       toast.error('Erro ao carregar dados do dashboard')
     } finally {
@@ -135,6 +144,10 @@ const DashboardExecutivo = () => {
           ))}
         </div>
         <Skeleton className="h-[400px] rounded-3xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-[400px] rounded-3xl" />
+          <Skeleton className="h-[400px] rounded-3xl" />
+        </div>
       </div>
     )
   }
@@ -274,6 +287,11 @@ const DashboardExecutivo = () => {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SupplierVolumeList data={supplierData} loading={loading} />
+        <SupplierRanking data={supplierData} loading={loading} />
+      </div>
     </div>
   )
 }
