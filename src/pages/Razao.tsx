@@ -309,7 +309,6 @@ const RazaoPage = () => {
               <TableRow className="bg-gray-50/50">
                 <TableHead className="w-[120px]">Data</TableHead>
                 <TableHead>Conta</TableHead>
-                <TableHead>Descrição</TableHead>
                 <TableHead>Histórico</TableHead>
                 <TableHead className="text-right">Débito</TableHead>
                 <TableHead className="text-right">Crédito</TableHead>
@@ -328,9 +327,6 @@ const RazaoPage = () => {
                   </TableCell>
                   <TableCell className="text-gray-600">
                     {item.descricao}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {item.historico ?? '-'}
                   </TableCell>
                   <TableCell className="text-right text-red-600 font-medium">
                     {item.debito > 0 ? formatCurrency(item.debito) : '-'}
