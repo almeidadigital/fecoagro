@@ -16,7 +16,7 @@ AS $$
 BEGIN
   RETURN (SELECT id FROM public.critica ORDER BY created_at DESC, id DESC LIMIT 1);
 END;
-$;
+$$;
 
 -- Update get_dashboard_kpi to reference critica
 CREATE OR REPLACE FUNCTION public.get_dashboard_kpi(p_date_now DATE)
@@ -63,4 +63,4 @@ BEGIN
     'lastMonthExpense', v_last_month_expense
   );
 END;
-$;
+$$;
