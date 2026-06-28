@@ -95,8 +95,8 @@ export function Sidebar() {
             <SidebarItem
               icon={FileWarning}
               label="Críticas Contábeis"
-              to="/payments"
-              isActive={pathname === '/payments'}
+              to="/critica"
+              isActive={pathname === '/critica'}
             />
             <SidebarItem
               icon={Receipt}

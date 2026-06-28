@@ -4,7 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Layout from './components/Layout'
 import Index from './pages/Index'
-import Payments from './pages/Payments'
+import Critica from './pages/Critica'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import NotFound from './pages/NotFound'
@@ -34,7 +34,7 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
-                <Route path="/payments" element={<Payments />} />
+                <Route path="/critica" element={<Critica />} />
                 <Route path="/notas-fiscais" element={<NotasFiscais />} />
                 <Route path="/razao" element={<Razao />} />
                 <Route path="/bancos" element={<Bancos />} />

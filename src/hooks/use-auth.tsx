@@ -14,6 +14,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   role: Role | null
+  avatarUrl: string | null
+  fullName: string | null
   signUp: (
     email: string,
     password: string,
@@ -22,6 +24,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
   loading: boolean
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -38,42 +41,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<Role | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [fullName, setFullName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const userIdRef = useRef<string | null>(null)
 
-  const fetchRole = async (userId: string): Promise<Role> => {
+  const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, full_name, avatar_url')
         .eq('id', userId)
         .single()
 
       if (error || !data) {
-        console.warn('Error fetching role, defaulting to visitante:', error)
-        return 'visitante'
+        return { role: 'visitante' as Role, full_name: null, avatar_url: null }
       }
-      return (data.role as Role) || 'visitante'
-    } catch (error) {
-      console.error('Exception fetching role:', error)
-      return 'visitante'
+      return {
+        role: (data.role as Role) || 'visitante',
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+      }
+    } catch {
+      return { role: 'visitante' as Role, full_name: null, avatar_url: null }
     }
   }
 
-  // Effect for fetching role when user changes
+  const refreshProfile = async () => {
+    if (!user?.id) return
+    const profile = await fetchProfile(user.id)
+    setRole(profile.role)
+    setFullName(profile.full_name)
+    setAvatarUrl(profile.avatar_url)
+  }
+
   useEffect(() => {
     let mounted = true
 
-    const getRole = async () => {
+    const getProfile = async () => {
       if (!user) return
-
       try {
-        const userRole = await fetchRole(user.id)
+        const profile = await fetchProfile(user.id)
         if (mounted) {
-          setRole(userRole)
+          setRole(profile.role)
+          setFullName(profile.full_name)
+          setAvatarUrl(profile.avatar_url)
         }
       } catch (error) {
-        console.error('Error in getRole:', error)
+        console.error('Error in getProfile:', error)
       } finally {
         if (mounted) {
           setLoading(false)
@@ -82,21 +97,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (user?.id) {
-      getRole()
+      getProfile()
     } else {
-      // If no user, ensure loading is false
       setLoading(false)
     }
 
     return () => {
       mounted = false
     }
-  }, [user?.id]) // Depend only on user ID to avoid unnecessary re-fetches
+  }, [user?.id])
 
   useEffect(() => {
     let mounted = true
 
-    // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -105,13 +118,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session)
       const newUser = session?.user ?? null
 
-      // If we have a new user (different ID), we should show loading until role is fetched
       if (newUser && newUser.id !== userIdRef.current) {
         setLoading(true)
         userIdRef.current = newUser.id
       } else if (!newUser) {
-        // If logged out, clear everything
         setRole(null)
+        setAvatarUrl(null)
+        setFullName(null)
         setLoading(false)
         userIdRef.current = null
       }
@@ -119,7 +132,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(newUser)
     })
 
-    // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
 
@@ -127,7 +139,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const newUser = session?.user ?? null
 
       if (newUser) {
-        // Loading is true by default, so we just set the ref
         userIdRef.current = newUser.id
       } else {
         setLoading(false)
@@ -166,6 +177,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut()
     if (!error) {
       setRole(null)
+      setAvatarUrl(null)
+      setFullName(null)
       setSession(null)
       setUser(null)
       userIdRef.current = null
@@ -177,10 +190,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     session,
     role,
+    avatarUrl,
+    fullName,
     signUp,
     signIn,
     signOut,
     loading,
+    refreshProfile,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

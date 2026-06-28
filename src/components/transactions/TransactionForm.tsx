@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CalendarIcon, Loader2 } from 'lucide-react'
+import { CalendarIcon, Loader2, ChevronsUpDown, Check } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -39,15 +39,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Transacao, FormaPagamento } from '@/lib/types'
 import useTransactionStore from '@/stores/useTransactionStore'
 import { toast } from 'sonner'
 
 const formSchema = z.object({
   data: z.date({ required_error: 'Data é obrigatória' }),
-  centro_custo_id: z.string().optional(),
-  atividade_id: z.string().optional(),
-  plano_conta_id: z.string().optional(),
+  centro_custo_id: z.string().min(1, 'Centro de custo é obrigatório'),
+  atividade_id: z.string().min(1, 'Atividade é obrigatória'),
+  plano_conta_id: z.string().min(1, 'Descrição da conta é obrigatória'),
   descricao: z
     .string()
     .min(2, { message: 'A descrição deve ter pelo menos 2 caracteres.' }),
@@ -264,25 +272,64 @@ export function TransactionForm({
               control={form.control}
               name="plano_conta_id"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Descrição da Conta</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {planoContas.map((pc) => (
-                        <SelectItem key={pc.id} value={pc.id}>
-                          {pc.descricao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            'w-full justify-between font-normal',
+                            !field.value && 'text-muted-foreground',
+                          )}
+                        >
+                          {field.value
+                            ? planoContas.find((pc) => pc.id === field.value)
+                                ?.descricao
+                            : 'Buscar conta...'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="p-0"
+                      align="start"
+                      style={{ width: 'var(--radix-popover-trigger-width)' }}
+                    >
+                      <Command>
+                        <CommandInput placeholder="Buscar conta..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {planoContas.map((pc) => (
+                              <CommandItem
+                                key={pc.id}
+                                value={pc.descricao || ''}
+                                onSelect={() => {
+                                  form.setValue('plano_conta_id', pc.id, {
+                                    shouldValidate: true,
+                                  })
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    pc.id === field.value
+                                      ? 'opacity-100'
+                                      : 'opacity-0',
+                                  )}
+                                />
+                                {pc.descricao}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
