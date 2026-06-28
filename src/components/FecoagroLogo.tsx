@@ -1,9 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-
-const FECOAGRO_LOGO_URL =
-  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
+import logoImage from '@/assets/image-89a4f.png'
 
 interface FecoagroLogoProps {
   className?: string
@@ -16,20 +13,10 @@ export function FecoagroLogo({
   linkTo,
   showOnDesktop = true,
 }: FecoagroLogoProps) {
-  const [imgError, setImgError] = useState(false)
-
-  const logoContent = imgError ? (
-    <span
-      className={cn('text-2xl font-bold tracking-tight', className)}
-      style={{ color: 'hsl(var(--primary))' }}
-    >
-      Fecoagro
-    </span>
-  ) : (
+  const logoContent = (
     <img
-      src={FECOAGRO_LOGO_URL}
+      src={logoImage}
       alt="Fecoagro"
-      onError={() => setImgError(true)}
       className={cn('h-10 w-auto object-contain', className)}
     />
   )
