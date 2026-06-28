@@ -30,12 +30,22 @@ import { toast } from 'sonner'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { ReconciliationSheet } from '@/components/ReconciliationSheet'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import {
   exportToCsv,
   buildExportFilename,
   formatCurrencyNumber,
   formatDateBR,
 } from '@/lib/export'
+
+const extratoColumns = [
+  { key: 'data', label: 'Data' },
+  { key: 'descricao', label: 'Descrição' },
+  { key: 'valor', label: 'Valor' },
+  { key: 'tipo', label: 'Tipo' },
+  { key: 'reconciled', label: 'Reconciliado' },
+]
 
 export default function Extratos() {
   const [bancos, setBancos] = useState<Banco[]>([])
@@ -48,14 +58,17 @@ export default function Extratos() {
   )
   const [reconcileOpen, setReconcileOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'extratos',
+    extratoColumns.map((c) => c.key),
+  )
 
   const loadBancos = useCallback(async () => {
     try {
       const data = await fetchAll<Banco>('bancos')
       setBancos(data)
-      if (data.length > 0 && selectedBancoId === null) {
+      if (data.length > 0 && selectedBancoId === null)
         setSelectedBancoId(data[0].id)
-      }
     } catch {
       toast.error('Erro ao carregar contas bancárias')
     }
@@ -77,7 +90,6 @@ export default function Extratos() {
   useEffect(() => {
     loadBancos()
   }, [loadBancos])
-
   useEffect(() => {
     if (selectedBancoId) loadExtratos()
   }, [selectedBancoId, loadExtratos])
@@ -85,11 +97,10 @@ export default function Extratos() {
   const filteredBancos = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
     if (!term) return bancos
-    return bancos.filter((b) => {
-      const idStr = String(b.id)
-      const bancoName = b.banco.toLowerCase()
-      return idStr.includes(term) || bancoName.includes(term)
-    })
+    return bancos.filter(
+      (b) =>
+        String(b.id).includes(term) || b.banco.toLowerCase().includes(term),
+    )
   }, [bancos, searchTerm])
 
   const selectedBanco = bancos.find((b) => b.id === selectedBancoId)
@@ -147,7 +158,7 @@ export default function Extratos() {
             Gerencie extratos e reconciliação bancária.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -171,6 +182,11 @@ export default function Extratos() {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={extratoColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
         </div>
       </div>
 
@@ -287,13 +303,23 @@ export default function Extratos() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50/50">
-                        <TableHead className="w-[100px]">Data</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead className="w-[80px]">Tipo</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                        <TableHead className="w-[120px] text-center">
-                          Status
-                        </TableHead>
+                        {visibleColumns.data && (
+                          <TableHead className="w-[100px]">Data</TableHead>
+                        )}
+                        {visibleColumns.descricao && (
+                          <TableHead>Descrição</TableHead>
+                        )}
+                        {visibleColumns.tipo && (
+                          <TableHead className="w-[80px]">Tipo</TableHead>
+                        )}
+                        {visibleColumns.valor && (
+                          <TableHead className="text-right">Valor</TableHead>
+                        )}
+                        {visibleColumns.reconciled && (
+                          <TableHead className="w-[120px] text-center">
+                            Status
+                          </TableHead>
+                        )}
                         <TableHead className="w-[140px] text-center">
                           Ação
                         </TableHead>
@@ -302,46 +328,56 @@ export default function Extratos() {
                     <TableBody>
                       {extratos.map((e) => (
                         <TableRow key={e.id}>
-                          <TableCell className="text-gray-600 text-sm">
-                            {format(new Date(e.data), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell className="font-medium text-gray-900 text-sm">
-                            {e.descricao}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
+                          {visibleColumns.data && (
+                            <TableCell className="text-gray-600 text-sm">
+                              {format(new Date(e.data), 'dd/MM/yyyy')}
+                            </TableCell>
+                          )}
+                          {visibleColumns.descricao && (
+                            <TableCell className="font-medium text-gray-900 text-sm">
+                              {e.descricao}
+                            </TableCell>
+                          )}
+                          {visibleColumns.tipo && (
+                            <TableCell>
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  e.tipo === 'credit'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700',
+                                )}
+                              >
+                                {e.tipo === 'credit' ? 'Crédito' : 'Débito'}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {visibleColumns.valor && (
+                            <TableCell
                               className={cn(
+                                'text-right font-bold text-sm',
                                 e.tipo === 'credit'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-red-100 text-red-700',
+                                  ? 'text-green-600'
+                                  : 'text-red-600',
                               )}
                             >
-                              {e.tipo === 'credit' ? 'Crédito' : 'Débito'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              'text-right font-bold text-sm',
-                              e.tipo === 'credit'
-                                ? 'text-green-600'
-                                : 'text-red-600',
-                            )}
-                          >
-                            {formatCurrency(e.valor)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                e.reconciled
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-amber-100 text-amber-700',
-                              )}
-                            >
-                              {e.reconciled ? 'Reconciliado' : 'Pendente'}
-                            </Badge>
-                          </TableCell>
+                              {formatCurrency(e.valor)}
+                            </TableCell>
+                          )}
+                          {visibleColumns.reconciled && (
+                            <TableCell className="text-center">
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  e.reconciled
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-amber-100 text-amber-700',
+                                )}
+                              >
+                                {e.reconciled ? 'Reconciliado' : 'Pendente'}
+                              </Badge>
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">
                             <Button
                               variant="ghost"
@@ -376,7 +412,6 @@ export default function Extratos() {
         extrato={reconcileItem}
         onSuccess={loadExtratos}
       />
-
       <PdfImportModal
         open={pdfOpen}
         onOpenChange={setPdfOpen}

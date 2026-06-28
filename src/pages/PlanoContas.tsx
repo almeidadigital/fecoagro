@@ -24,6 +24,8 @@ import {
 import { PlanoContasForm } from '@/components/forms/PlanoContasForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import {
   ComboboxFilter,
   ComboboxFilterState,
@@ -40,6 +42,12 @@ const filterColumns: ComboboxFilterColumn[] = [
   { value: 'descricao', label: 'Descrição' },
 ]
 
+const planoColumns = [
+  { key: 'classificacao', label: 'Classificação' },
+  { key: 'descricao', label: 'Descrição' },
+  { key: 'tipo', label: 'Tipo' },
+]
+
 const PlanoContasPage = () => {
   const [data, setData] = useState<PlanoConta[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,6 +59,10 @@ const PlanoContasPage = () => {
     value: '',
     dateRange: undefined,
   })
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'plano-contas',
+    planoColumns.map((c) => c.key),
+  )
 
   const filteredData = data.filter((p) => {
     if (!filters.column || !filters.value) return true
@@ -97,7 +109,7 @@ const PlanoContasPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Plano de Contas</h1>
           <p className="text-gray-500">Gerencie seu plano de contas.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -119,6 +131,11 @@ const PlanoContasPage = () => {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={planoColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button
             onClick={() => {
               setEditItem(null)
@@ -147,95 +164,110 @@ const PlanoContasPage = () => {
             setFilters={setFilters}
             showDateRange={false}
           />
-
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50">
-                  <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Classificação</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="w-[100px] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs text-gray-400">
-                      #{item.id}
-                    </TableCell>
-                    <TableCell className="font-mono text-gray-600">
-                      {item.classificacao}
-                    </TableCell>
-                    <TableCell className="font-semibold text-gray-900">
-                      {item.descricao}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          item.tipo === 'analitica'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-purple-50 text-purple-700'
-                        }
-                      >
-                        {item.tipo}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-primary hover:bg-primary/10"
-                          onClick={() => {
-                            setEditItem(item)
-                            setFormOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação excluirá permanentemente a conta.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={async () => {
-                                  await deleteRecord('plano_contas', item.id)
-                                  setData((prev) =>
-                                    prev.filter((i) => i.id !== item.id),
-                                  )
-                                  toast.success('Conta excluída')
-                                }}
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="w-[100px]">ID</TableHead>
+                    {visibleColumns.classificacao && (
+                      <TableHead>Classificação</TableHead>
+                    )}
+                    {visibleColumns.descricao && (
+                      <TableHead>Descrição</TableHead>
+                    )}
+                    {visibleColumns.tipo && <TableHead>Tipo</TableHead>}
+                    <TableHead className="w-[100px] text-right">
+                      Ações
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs text-gray-400">
+                        #{item.id}
+                      </TableCell>
+                      {visibleColumns.classificacao && (
+                        <TableCell className="font-mono text-gray-600">
+                          {item.classificacao}
+                        </TableCell>
+                      )}
+                      {visibleColumns.descricao && (
+                        <TableCell className="font-semibold text-gray-900">
+                          {item.descricao}
+                        </TableCell>
+                      )}
+                      {visibleColumns.tipo && (
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={
+                              item.tipo === 'analitica'
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-purple-50 text-purple-700'
+                            }
+                          >
+                            {item.tipo}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:bg-primary/10"
+                            onClick={() => {
+                              setEditItem(item)
+                              setFormOpen(true)
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Tem certeza?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação excluirá permanentemente a conta.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={async () => {
+                                    await deleteRecord('plano_contas', item.id)
+                                    setData((prev) =>
+                                      prev.filter((i) => i.id !== item.id),
+                                    )
+                                    toast.success('Conta excluída')
+                                  }}
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </>
       )}

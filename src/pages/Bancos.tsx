@@ -33,6 +33,8 @@ import {
 import { BancosForm } from '@/components/forms/BancosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import { Banco } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { exportToCsv, formatCurrencyNumber } from '@/lib/export'
@@ -43,6 +45,13 @@ const formatCurrency = (v: number) =>
     v,
   )
 
+const bancoColumns = [
+  { key: 'banco', label: 'Banco' },
+  { key: 'agencia', label: 'Agência' },
+  { key: 'conta_corrente', label: 'Conta Corrente' },
+  { key: 'saldo_atual', label: 'Saldo Atual' },
+]
+
 const BancosPage = () => {
   const [data, setData] = useState<Banco[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,8 +59,11 @@ const BancosPage = () => {
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<Banco | null>(null)
   const [idFilter, setIdFilter] = useState('')
-  const [bankFilter, setBankFilter] = useState('all')
   const [bankNameFilter, setBankNameFilter] = useState('')
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'bancos',
+    bancoColumns.map((c) => c.key),
+  )
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -117,7 +129,7 @@ const BancosPage = () => {
             Gerencie suas contas bancárias e saldos.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -141,6 +153,11 @@ const BancosPage = () => {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={bancoColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Nova Conta
           </Button>
@@ -199,95 +216,109 @@ const BancosPage = () => {
         </div>
       ) : (
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>Agência</TableHead>
-                <TableHead>Conta Corrente</TableHead>
-                <TableHead className="text-right">Saldo Atual</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs text-gray-400">
-                    #{item.id}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Landmark className="w-4 h-4 text-primary" />
-                      </div>
-                      <span className="font-semibold text-gray-900">
-                        {item.banco}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-gray-600 font-mono text-sm">
-                    {item.agencia}
-                  </TableCell>
-                  <TableCell className="text-gray-600 font-mono text-sm">
-                    {item.conta_corrente}
-                  </TableCell>
-                  <TableCell
-                    className={`text-right font-bold ${item.saldo_atual >= 0 ? 'text-gray-900' : 'text-red-600'}`}
-                  >
-                    {formatCurrency(item.saldo_atual)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação excluirá permanentemente a conta
-                              bancária.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={async () => {
-                                await deleteRecord('bancos', item.id)
-                                setData((prev) =>
-                                  prev.filter((i) => i.id !== item.id),
-                                )
-                                toast.success('Conta excluída')
-                              }}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  {visibleColumns.banco && <TableHead>Banco</TableHead>}
+                  {visibleColumns.agencia && <TableHead>Agência</TableHead>}
+                  {visibleColumns.conta_corrente && (
+                    <TableHead>Conta Corrente</TableHead>
+                  )}
+                  {visibleColumns.saldo_atual && (
+                    <TableHead className="text-right">Saldo Atual</TableHead>
+                  )}
+                  <TableHead className="w-[100px] text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs text-gray-400">
+                      #{item.id}
+                    </TableCell>
+                    {visibleColumns.banco && (
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Landmark className="w-4 h-4 text-primary" />
+                          </div>
+                          <span className="font-semibold text-gray-900">
+                            {item.banco}
+                          </span>
+                        </div>
+                      </TableCell>
+                    )}
+                    {visibleColumns.agencia && (
+                      <TableCell className="text-gray-600 font-mono text-sm">
+                        {item.agencia}
+                      </TableCell>
+                    )}
+                    {visibleColumns.conta_corrente && (
+                      <TableCell className="text-gray-600 font-mono text-sm">
+                        {item.conta_corrente}
+                      </TableCell>
+                    )}
+                    {visibleColumns.saldo_atual && (
+                      <TableCell
+                        className={`text-right font-bold ${item.saldo_atual >= 0 ? 'text-gray-900' : 'text-red-600'}`}
+                      >
+                        {formatCurrency(item.saldo_atual)}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação excluirá permanentemente a conta
+                                bancária.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={async () => {
+                                  await deleteRecord('bancos', item.id)
+                                  setData((prev) =>
+                                    prev.filter((i) => i.id !== item.id),
+                                  )
+                                  toast.success('Conta excluída')
+                                }}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

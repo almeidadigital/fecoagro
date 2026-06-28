@@ -23,6 +23,8 @@ import {
 import { CentroCustosForm } from '@/components/forms/CentroCustosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import {
   ComboboxFilter,
   ComboboxFilterState,
@@ -38,6 +40,8 @@ const filterColumns: ComboboxFilterColumn[] = [
   { value: 'centro_de_custos', label: 'Centro de Custos' },
 ]
 
+const centroColumns = [{ key: 'centro_de_custos', label: 'Centro de Custos' }]
+
 const CentroCustosPage = () => {
   const [data, setData] = useState<CentroCusto[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,6 +53,10 @@ const CentroCustosPage = () => {
     value: '',
     dateRange: undefined,
   })
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'centro-custos',
+    centroColumns.map((c) => c.key),
+  )
 
   const filteredData = data.filter((c) => {
     if (!filters.column || !filters.value) return true
@@ -90,7 +98,7 @@ const CentroCustosPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Centro de Custos</h1>
           <p className="text-gray-500">Gerencie seus centros de custos.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -108,6 +116,11 @@ const CentroCustosPage = () => {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={centroColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button
             onClick={() => {
               setEditItem(null)
@@ -138,79 +151,88 @@ const CentroCustosPage = () => {
             setFilters={setFilters}
             showDateRange={false}
           />
-
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50">
-                  <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Centro de Custos</TableHead>
-                  <TableHead className="w-[100px] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs text-gray-400">
-                      #{item.id}
-                    </TableCell>
-                    <TableCell className="font-semibold text-gray-900">
-                      {item.centro_de_custos}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-primary hover:bg-primary/10"
-                          onClick={() => {
-                            setEditItem(item)
-                            setFormOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta ação excluirá permanentemente o centro de
-                                custo.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={async () => {
-                                  await deleteRecord('centro_custos', item.id)
-                                  setData((prev) =>
-                                    prev.filter((i) => i.id !== item.id),
-                                  )
-                                  toast.success('Centro de custo excluído')
-                                }}
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="w-[100px]">ID</TableHead>
+                    {visibleColumns.centro_de_custos && (
+                      <TableHead>Centro de Custos</TableHead>
+                    )}
+                    <TableHead className="w-[100px] text-right">
+                      Ações
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs text-gray-400">
+                        #{item.id}
+                      </TableCell>
+                      {visibleColumns.centro_de_custos && (
+                        <TableCell className="font-semibold text-gray-900">
+                          {item.centro_de_custos}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:bg-primary/10"
+                            onClick={() => {
+                              setEditItem(item)
+                              setFormOpen(true)
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Tem certeza?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação excluirá permanentemente o centro de
+                                  custo.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={async () => {
+                                    await deleteRecord('centro_custos', item.id)
+                                    setData((prev) =>
+                                      prev.filter((i) => i.id !== item.id),
+                                    )
+                                    toast.success('Centro de custo excluído')
+                                  }}
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </>
       )}

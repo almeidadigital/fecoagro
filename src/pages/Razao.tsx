@@ -43,6 +43,8 @@ import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { StatementViewDialog } from '@/components/StatementViewDialog'
 import { SearchableFilter } from '@/components/SearchableFilter'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import { Razao, PlanoConta } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { auxiliaryService } from '@/services/auxiliaryService'
@@ -63,10 +65,19 @@ interface RazaoFilters {
 }
 
 const formatCurrency = (v: number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(v)
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    v,
+  )
+
+const razaoColumns = [
+  { key: 'data', label: 'Data' },
+  { key: 'conta', label: 'Conta' },
+  { key: 'historico', label: 'Histórico' },
+  { key: 'debito', label: 'Débito' },
+  { key: 'credito', label: 'Crédito' },
+  { key: 'saldo', label: 'Saldo' },
+  { key: 'lote', label: 'Lote' },
+]
 
 const RazaoPage = () => {
   const [data, setData] = useState<Razao[]>([])
@@ -83,6 +94,10 @@ const RazaoPage = () => {
     valorMin: '',
     valorMax: '',
   })
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'razao',
+    razaoColumns.map((c) => c.key),
+  )
 
   const loadData = useCallback(async () => {
     try {
@@ -94,7 +109,6 @@ const RazaoPage = () => {
         eqColumn: filters.conta !== 'all' ? 'plano_conta_id' : undefined,
         eqValue: filters.conta !== 'all' ? filters.conta : undefined,
       })
-
       let filtered = result
       const minVal = parseFloat(filters.valorMin)
       const maxVal = parseFloat(filters.valorMax)
@@ -188,7 +202,7 @@ const RazaoPage = () => {
             Controle de débitos, créditos e saldos por conta.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -214,6 +228,11 @@ const RazaoPage = () => {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={razaoColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
           </Button>
@@ -259,7 +278,6 @@ const RazaoPage = () => {
             />
           </PopoverContent>
         </Popover>
-
         <SearchableFilter
           options={contaOptions}
           value={filters.conta}
@@ -268,7 +286,6 @@ const RazaoPage = () => {
           }
           placeholder="Filtrar por conta"
         />
-
         <div className="flex gap-2 items-center">
           <Input
             type="number"
@@ -304,98 +321,128 @@ const RazaoPage = () => {
         </div>
       ) : (
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead className="w-[120px]">Data</TableHead>
-                <TableHead>Conta</TableHead>
-                <TableHead>Histórico</TableHead>
-                <TableHead className="text-right">Débito</TableHead>
-                <TableHead className="text-right">Crédito</TableHead>
-                <TableHead className="text-right">Saldo</TableHead>
-                <TableHead className="w-[140px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="text-gray-600">
-                    {new Date(item.data).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm font-semibold text-gray-900">
-                    {getContaLabel(item.plano_conta_id)}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {item.descricao}
-                  </TableCell>
-                  <TableCell className="text-right text-red-600 font-medium">
-                    {item.debito > 0 ? formatCurrency(item.debito) : '-'}
-                  </TableCell>
-                  <TableCell className="text-right text-green-600 font-medium">
-                    {item.credito > 0 ? formatCurrency(item.credito) : '-'}
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-gray-900">
-                    {formatCurrency(item.saldo)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-500 hover:bg-gray-100"
-                        onClick={() => handleView(item)}
-                        title="Visualização de Extrato"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação excluirá permanentemente o lançamento.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={async () => {
-                                await deleteRecord('razao', item.id)
-                                setData((prev) =>
-                                  prev.filter((i) => i.id !== item.id),
-                                )
-                                toast.success('Lançamento excluído')
-                              }}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  {visibleColumns.data && (
+                    <TableHead className="w-[120px]">Data</TableHead>
+                  )}
+                  {visibleColumns.conta && <TableHead>Conta</TableHead>}
+                  {visibleColumns.historico && <TableHead>Histórico</TableHead>}
+                  {visibleColumns.debito && (
+                    <TableHead className="text-right">Débito</TableHead>
+                  )}
+                  {visibleColumns.credito && (
+                    <TableHead className="text-right">Crédito</TableHead>
+                  )}
+                  {visibleColumns.saldo && (
+                    <TableHead className="text-right">Saldo</TableHead>
+                  )}
+                  {visibleColumns.lote && (
+                    <TableHead className="w-[100px]">Lote</TableHead>
+                  )}
+                  <TableHead className="w-[140px] text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((item) => (
+                  <TableRow key={item.id}>
+                    {visibleColumns.data && (
+                      <TableCell className="text-gray-600">
+                        {new Date(item.data).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                    )}
+                    {visibleColumns.conta && (
+                      <TableCell className="font-mono text-sm font-semibold text-gray-900">
+                        {getContaLabel(item.plano_conta_id)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.historico && (
+                      <TableCell className="text-gray-600">
+                        {item.descricao}
+                      </TableCell>
+                    )}
+                    {visibleColumns.debito && (
+                      <TableCell className="text-right text-red-600 font-medium">
+                        {item.debito > 0 ? formatCurrency(item.debito) : '-'}
+                      </TableCell>
+                    )}
+                    {visibleColumns.credito && (
+                      <TableCell className="text-right text-green-600 font-medium">
+                        {item.credito > 0 ? formatCurrency(item.credito) : '-'}
+                      </TableCell>
+                    )}
+                    {visibleColumns.saldo && (
+                      <TableCell className="text-right font-bold text-gray-900">
+                        {formatCurrency(item.saldo)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.lote && (
+                      <TableCell className="text-gray-600 text-sm">
+                        {item.lote ?? '-'}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:bg-gray-100"
+                          onClick={() => handleView(item)}
+                          title="Visualização de Extrato"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação excluirá permanentemente o lançamento.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={async () => {
+                                  await deleteRecord('razao', item.id)
+                                  setData((prev) =>
+                                    prev.filter((i) => i.id !== item.id),
+                                  )
+                                  toast.success('Lançamento excluído')
+                                }}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

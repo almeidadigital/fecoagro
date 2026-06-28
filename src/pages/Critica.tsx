@@ -12,6 +12,8 @@ import {
 import { TransactionsTable } from '@/components/transactions/TransactionsTable'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import useTransactionStore from '@/stores/useTransactionStore'
 import {
   Transacao,
@@ -71,6 +73,19 @@ const Critica = () => {
     status: '',
     dateRange: undefined,
   })
+
+  const criticaColumns = [
+    { key: 'date', label: 'Data' },
+    { key: 'historico', label: 'Histórico' },
+    { key: 'amount', label: 'Valor' },
+    { key: 'lote', label: 'Lote' },
+    { key: 'status', label: 'Status' },
+    { key: 'reconciled', label: 'Reconciliado' },
+  ]
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'critica',
+    criticaColumns.map((c) => c.key),
+  )
 
   useEffect(() => {
     auxiliaryService
@@ -205,6 +220,11 @@ const Critica = () => {
             <Download className="w-4 h-4 mr-2" />
             Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={criticaColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button
             onClick={handleCreate}
             className="shadow-lg hover:shadow-xl transition-all"
@@ -236,6 +256,7 @@ const Critica = () => {
           centroCustos={centroCustos}
           planoContas={planoContas}
           notasFiscais={notasFiscais}
+          visibleColumns={visibleColumns}
         />
       )}
       <TransactionForm

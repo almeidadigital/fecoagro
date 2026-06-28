@@ -33,6 +33,8 @@ import { NotasFiscaisForm } from '@/components/forms/NotasFiscaisForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { NotaFiscalViewDialog } from '@/components/NotaFiscalViewDialog'
 import { PdfExportButton } from '@/components/PdfExportButton'
+import { ColumnVisibility } from '@/components/ColumnVisibility'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import { NotaFiscal } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import {
@@ -54,6 +56,14 @@ const statusColors: Record<string, string> = {
   cancelada: 'bg-red-50 text-red-700 border-red-200',
 }
 
+const nfColumns = [
+  { key: 'numero_nota', label: 'Número Nota' },
+  { key: 'emissor', label: 'Emissor' },
+  { key: 'data_emissao', label: 'Data Emissão' },
+  { key: 'valor_total', label: 'Valor Total' },
+  { key: 'status', label: 'Status' },
+]
+
 const NotasFiscais = () => {
   const [data, setData] = useState<NotaFiscal[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,6 +75,10 @@ const NotasFiscais = () => {
   const [numeroFilter, setNumeroFilter] = useState('')
   const [emissorFilter, setEmissorFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const { visibleColumns, toggleColumn } = useColumnVisibility(
+    'notas-fiscais',
+    nfColumns.map((c) => c.key),
+  )
 
   const loadData = useCallback(async () => {
     try {
@@ -74,16 +88,14 @@ const NotasFiscais = () => {
         value: string
         isText?: boolean
       }> = []
-      if (emissorFilter.trim()) {
+      if (emissorFilter.trim())
         andFilters.push({
           column: 'emissor',
           value: emissorFilter.trim(),
           isText: true,
         })
-      }
-      if (numeroFilter.trim()) {
+      if (numeroFilter.trim())
         andFilters.push({ column: 'numero_nota', value: numeroFilter.trim() })
-      }
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
         andFilters,
         eqColumn: statusFilter !== 'all' ? 'status' : undefined,
@@ -147,7 +159,7 @@ const NotasFiscais = () => {
             Gerencie suas notas fiscais e documentos.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
@@ -171,6 +183,11 @@ const NotasFiscais = () => {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
+          <ColumnVisibility
+            columns={nfColumns}
+            visibleColumns={visibleColumns}
+            onToggle={toggleColumn}
+          />
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Nova Nota
           </Button>
@@ -233,99 +250,118 @@ const NotasFiscais = () => {
         </div>
       ) : (
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead>Número</TableHead>
-                <TableHead>Data Emissão</TableHead>
-                <TableHead>Emissor</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[150px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-semibold text-gray-900">
-                    {item.numero_nota}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {new Date(item.data_emissao).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {item.emissor}
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-gray-900">
-                    {formatCurrency(item.valor_total)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusColors[item.status] || ''}
-                    >
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-blue-600 hover:bg-blue-50"
-                        onClick={() => handleView(item)}
-                        title="Visualizar"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação excluirá permanentemente a nota fiscal.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={async () => {
-                                await deleteRecord('notas_fiscais', item.id)
-                                setData((prev) =>
-                                  prev.filter((i) => i.id !== item.id),
-                                )
-                                toast.success('Nota fiscal excluída')
-                              }}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  {visibleColumns.numero_nota && <TableHead>Número</TableHead>}
+                  {visibleColumns.data_emissao && (
+                    <TableHead>Data Emissão</TableHead>
+                  )}
+                  {visibleColumns.emissor && <TableHead>Emissor</TableHead>}
+                  {visibleColumns.valor_total && (
+                    <TableHead className="text-right">Valor</TableHead>
+                  )}
+                  {visibleColumns.status && <TableHead>Status</TableHead>}
+                  <TableHead className="w-[150px] text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((item) => (
+                  <TableRow key={item.id}>
+                    {visibleColumns.numero_nota && (
+                      <TableCell className="font-semibold text-gray-900">
+                        {item.numero_nota}
+                      </TableCell>
+                    )}
+                    {visibleColumns.data_emissao && (
+                      <TableCell className="text-gray-600">
+                        {new Date(item.data_emissao).toLocaleDateString(
+                          'pt-BR',
+                        )}
+                      </TableCell>
+                    )}
+                    {visibleColumns.emissor && (
+                      <TableCell className="text-gray-600">
+                        {item.emissor}
+                      </TableCell>
+                    )}
+                    {visibleColumns.valor_total && (
+                      <TableCell className="text-right font-bold text-gray-900">
+                        {formatCurrency(item.valor_total)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.status && (
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={statusColors[item.status] || ''}
+                        >
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                          onClick={() => handleView(item)}
+                          title="Visualizar"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação excluirá permanentemente a nota
+                                fiscal.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={async () => {
+                                  await deleteRecord('notas_fiscais', item.id)
+                                  setData((prev) =>
+                                    prev.filter((i) => i.id !== item.id),
+                                  )
+                                  toast.success('Nota fiscal excluída')
+                                }}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
