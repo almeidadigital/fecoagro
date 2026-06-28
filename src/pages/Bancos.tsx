@@ -152,7 +152,7 @@ const BancosPage = () => {
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-mono text-xs text-gray-400">
-                      {item.id.substring(0, 8)}
+                      {String(item.id).slice(0, 8)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
