@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Edit, Trash2 } from 'lucide-react'
+import { Plus, FileUp, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { NotasFiscaisForm } from '@/components/forms/NotasFiscaisForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { NotaFiscalViewDialog } from '@/components/NotaFiscalViewDialog'
 import {
   GenericTableFilters,
   GenericFilterState,
@@ -48,6 +49,8 @@ const NotasFiscais = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<NotaFiscal | null>(null)
+  const [viewItem, setViewItem] = useState<NotaFiscal | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
   const [filters, setFilters] = useState<GenericFilterState>({
     search: '',
     dateRange: undefined,
@@ -58,7 +61,7 @@ const NotasFiscais = () => {
     try {
       setLoading(true)
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
-        searchColumns: ['emissor'],
+        searchColumns: ['numero_nota'],
         searchValue: filters.search,
         dateColumn: 'data_emissao',
         dateFrom: filters.dateRange?.from,
@@ -87,6 +90,10 @@ const NotasFiscais = () => {
     setEditItem(item)
     setFormOpen(true)
   }
+  const handleView = (item: NotaFiscal) => {
+    setViewItem(item)
+    setViewOpen(true)
+  }
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -110,7 +117,7 @@ const NotasFiscais = () => {
       <GenericTableFilters
         filters={filters}
         setFilters={setFilters}
-        searchPlaceholder="Buscar por emissor..."
+        searchPlaceholder="Filtrar por Número..."
         statusOptions={[
           { value: 'pendente', label: 'Pendente' },
           { value: 'aprovada', label: 'Aprovada' },
@@ -140,7 +147,7 @@ const NotasFiscais = () => {
                 <TableHead>Emissor</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
+                <TableHead className="w-[150px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,6 +175,15 @@ const NotasFiscais = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleView(item)}
+                        title="Visualizar"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -230,6 +246,11 @@ const NotasFiscais = () => {
         onOpenChange={setPdfOpen}
         entityType="notas_fiscais"
         onSuccess={loadData}
+      />
+      <NotaFiscalViewDialog
+        open={viewOpen}
+        onOpenChange={setViewOpen}
+        item={viewItem}
       />
     </div>
   )
