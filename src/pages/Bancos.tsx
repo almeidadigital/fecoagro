@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Download, Edit, Trash2, Landmark } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Plus, FileUp, Download, Edit, Trash2, Landmark, Search, Hash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -22,7 +23,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { BancosForm } from '@/components/forms/BancosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
-import { SearchableFilter } from '@/components/SearchableFilter'
 import { PdfExportButton } from '@/components/PdfExportButton'
 import { Banco } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
@@ -40,10 +40,20 @@ const BancosPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<Banco | null>(null)
+  const [idFilter, setIdFilter] = useState('')
   const [bankFilter, setBankFilter] = useState('all')
+  const [bankNameFilter, setBankNameFilter] = useState('')
 
-  const filteredData =
-    bankFilter === 'all' ? data : data.filter((b) => b.banco === bankFilter)
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const matchesId =
+        idFilter.trim() === '' || String(item.id) === idFilter.trim()
+      const matchesBankName =
+        bankNameFilter.trim() === '' ||
+        item.banco.toLowerCase().includes(bankNameFilter.trim().toLowerCase())
+      return matchesId && matchesBankName
+    })
+  }, [data, idFilter, bankNameFilter])
 
   const loadData = useCallback(async () => {
     try {
@@ -89,11 +99,6 @@ const BancosPage = () => {
 
   const totalSaldo = data.reduce((sum, b) => sum + b.saldo_atual, 0)
 
-  const bankOptions = [...new Set(data.map((b) => b.banco))].map((b) => ({
-    value: b,
-    label: b,
-  }))
-
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -131,10 +136,34 @@ const BancosPage = () => {
             <Plus className="w-4 h-4 mr-2" /> Nova Conta
           </Button>
         </div>
-      </div>
+      )}
 
       {data.length > 0 && (
-        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 sm:max-w-[180px]">
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="number"
+              placeholder="Filtrar por ID..."
+              value={idFilter}
+              onChange={(e) => setIdFilter(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+          <div className="relative flex-1 sm:max-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Filtrar por banco..."
+              value={bankNameFilter}
+              onChange={(e) => setBankNameFilter(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+        </div>
+      )}
+
+      {data.length > 0 && (        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-600">
             Saldo Total Consolidado
           </span>
@@ -160,13 +189,6 @@ const BancosPage = () => {
         </div>
       ) : (
         <>
-          <SearchableFilter
-            options={bankOptions}
-            value={bankFilter}
-            onValueChange={setBankFilter}
-            placeholder="Filtrar por banco"
-          />
-
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             <Table>
               <TableHeader>
