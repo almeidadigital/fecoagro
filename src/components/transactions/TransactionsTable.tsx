@@ -78,7 +78,7 @@ export function TransactionsTable({
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-white shadow-sm">
-        <p className="text-gray-500">Nenhuma crítica encontrada.</p>
+        <p className="text-gray-500">Nenhum registro encontrado</p>
       </div>
     )
   }

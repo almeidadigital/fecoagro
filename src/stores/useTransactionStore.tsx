@@ -6,12 +6,12 @@ import {
   ReactNode,
 } from 'react'
 import { Transacao } from '@/lib/types'
-import { ComboboxFilterState } from '@/components/ComboboxFilter'
+import { CriticaFilterState } from '@/components/critica/CriticaFilters'
 import { fetchTransactions } from '@/services/transactionService'
 
 interface TransactionStoreType {
   transactions: Transacao[]
-  fetchTransactions: (filters: ComboboxFilterState) => Promise<void>
+  fetchTransactions: (filters: CriticaFilterState) => Promise<void>
   loading: boolean
   initialized: boolean
 }
@@ -35,7 +35,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)
 
   const fetchTransactionsData = useCallback(
-    async (filters: ComboboxFilterState) => {
+    async (filters: CriticaFilterState) => {
       try {
         setLoading(true)
         const data = await fetchTransactions(filters)

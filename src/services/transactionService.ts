@@ -1,23 +1,31 @@
 import { supabase } from '@/lib/supabase/client'
 import { Transacao } from '@/lib/types'
-import { ComboboxFilterState } from '@/components/ComboboxFilter'
+import { CriticaFilterState } from '@/components/critica/CriticaFilters'
 import { format } from 'date-fns'
 
 export async function fetchTransactions(
-  filters: ComboboxFilterState,
+  filters: CriticaFilterState,
 ): Promise<Transacao[]> {
   let query = supabase.from('critica').select('*')
 
-  if (filters.column && filters.value) {
-    if (filters.column === 'historico') {
-      query = query.or(
-        `historico.ilike.%${filters.value}%,description.ilike.%${filters.value}%`,
-      )
-    } else if (filters.column === 'status') {
-      query = query.eq('status', filters.value)
-    } else {
-      query = query.ilike(filters.column, `%${filters.value}%`)
-    }
+  if (filters.historico) {
+    query = query.ilike('description', `%${filters.historico}%`)
+  }
+
+  if (filters.atividade_id) {
+    query = query.eq('atividade_id', Number(filters.atividade_id))
+  }
+
+  if (filters.centro_custo_id) {
+    query = query.eq('centro_custo_id', Number(filters.centro_custo_id))
+  }
+
+  if (filters.plano_conta_id) {
+    query = query.eq('plano_conta_id', Number(filters.plano_conta_id))
+  }
+
+  if (filters.status) {
+    query = query.eq('status', filters.status)
   }
 
   if (filters.dateRange?.from) {

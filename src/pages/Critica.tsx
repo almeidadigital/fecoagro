@@ -6,10 +6,9 @@ import { TransactionViewDialog } from '@/components/transactions/TransactionView
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import {
-  ComboboxFilter,
-  ComboboxFilterState,
-  ComboboxFilterColumn,
-} from '@/components/ComboboxFilter'
+  CriticaFilters,
+  CriticaFilterState,
+} from '@/components/critica/CriticaFilters'
 import { TransactionsTable } from '@/components/transactions/TransactionsTable'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import useTransactionStore from '@/stores/useTransactionStore'
@@ -28,19 +27,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-const filterColumns: ComboboxFilterColumn[] = [
-  { value: 'historico', label: 'Histórico' },
-  {
-    value: 'status',
-    label: 'Status',
-    options: [
-      { value: 'pendente', label: 'Pendente' },
-      { value: 'concluido', label: 'Concluído' },
-      { value: 'cancelado', label: 'Cancelado' },
-    ],
-  },
-]
-
 const Critica = () => {
   const { transactions, fetchTransactions, loading, initialized } =
     useTransactionStore()
@@ -56,9 +42,12 @@ const Critica = () => {
   const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
 
-  const [filters, setFilters] = useState<ComboboxFilterState>({
-    column: '',
-    value: '',
+  const [filters, setFilters] = useState<CriticaFilterState>({
+    historico: '',
+    atividade_id: '',
+    centro_custo_id: '',
+    plano_conta_id: '',
+    status: '',
     dateRange: undefined,
   })
 
@@ -142,10 +131,12 @@ const Critica = () => {
           </Button>
         </div>
       </div>
-      <ComboboxFilter
-        columns={filterColumns}
+      <CriticaFilters
         filters={filters}
         setFilters={setFilters}
+        atividades={atividades}
+        centroCustos={centroCustos}
+        planoContas={planoContas}
       />
       {showLoading ? (
         <div className="flex justify-center py-10">
