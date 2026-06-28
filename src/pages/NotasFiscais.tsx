@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { Plus, FileUp, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -24,10 +32,6 @@ import {
 import { NotasFiscaisForm } from '@/components/forms/NotasFiscaisForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { NotaFiscalViewDialog } from '@/components/NotaFiscalViewDialog'
-import {
-  GenericTableFilters,
-  GenericFilterState,
-} from '@/components/GenericTableFilters'
 import { NotaFiscal } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
@@ -51,23 +55,32 @@ const NotasFiscais = () => {
   const [editItem, setEditItem] = useState<NotaFiscal | null>(null)
   const [viewItem, setViewItem] = useState<NotaFiscal | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
-  const [filters, setFilters] = useState<GenericFilterState>({
-    search: '',
-    dateRange: undefined,
-    status: 'all',
-  })
+  const [numeroFilter, setNumeroFilter] = useState('')
+  const [emissorFilter, setEmissorFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
+      const andFilters: Array<{
+        column: string
+        value: string
+        isText?: boolean
+      }> = []
+      if (emissorFilter.trim()) {
+        andFilters.push({
+          column: 'emissor',
+          value: emissorFilter.trim(),
+          isText: true,
+        })
+      }
+      if (numeroFilter.trim()) {
+        andFilters.push({ column: 'numero_nota', value: numeroFilter.trim() })
+      }
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
-        searchColumns: ['numero_nota'],
-        searchValue: filters.search,
-        dateColumn: 'data_emissao',
-        dateFrom: filters.dateRange?.from,
-        dateTo: filters.dateRange?.to,
-        statusColumn: 'status',
-        statusValue: filters.status,
+        andFilters,
+        eqColumn: statusFilter !== 'all' ? 'status' : undefined,
+        eqValue: statusFilter !== 'all' ? statusFilter : undefined,
       })
       setData(result)
     } catch {
@@ -75,7 +88,7 @@ const NotasFiscais = () => {
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [emissorFilter, numeroFilter, statusFilter])
 
   useEffect(() => {
     const timer = setTimeout(() => loadData(), 300)
@@ -114,17 +127,48 @@ const NotasFiscais = () => {
         </div>
       </div>
 
-      <GenericTableFilters
-        filters={filters}
-        setFilters={setFilters}
-        searchPlaceholder="Filtrar por Número..."
-        statusOptions={[
-          { value: 'pendente', label: 'Pendente' },
-          { value: 'aprovada', label: 'Aprovada' },
-          { value: 'cancelada', label: 'Cancelada' },
-        ]}
-        showStatus={true}
-      />
+      <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="flex-1 w-full">
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Número
+          </label>
+          <Input
+            type="number"
+            placeholder="Filtrar por número..."
+            value={numeroFilter}
+            onChange={(e) => setNumeroFilter(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1 w-full">
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Emissor
+          </label>
+          <Input
+            type="text"
+            placeholder="Filtrar por emissor..."
+            value={emissorFilter}
+            onChange={(e) => setEmissorFilter(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Status
+          </label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="aprovada">Aprovada</SelectItem>
+              <SelectItem value="cancelada">Cancelada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-10">

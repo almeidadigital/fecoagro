@@ -102,6 +102,7 @@ export async function fetchWithFilters<T>(
     valueMax?: number
     eqColumn?: string
     eqValue?: string
+    andFilters?: Array<{ column: string; value: string; isText?: boolean }>
   },
 ): Promise<T[]> {
   let query = supabase.from(table).select('*')
@@ -147,6 +148,18 @@ export async function fetchWithFilters<T>(
   }
   if (options.valueMax !== undefined && options.valueColumn) {
     query = query.lte(options.valueColumn, options.valueMax)
+  }
+
+  if (options.andFilters) {
+    for (const filter of options.andFilters) {
+      if (filter.value) {
+        if (filter.isText || textColumns.includes(filter.column)) {
+          query = query.ilike(filter.column, `%${filter.value}%`)
+        } else {
+          query = query.eq(filter.column, filter.value)
+        }
+      }
+    }
   }
 
   query = query.order('created_at', { ascending: false })
