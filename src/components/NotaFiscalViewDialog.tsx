@@ -72,7 +72,7 @@ export function NotaFiscalViewDialog({
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500">
-                Emissor
+                Fornecedor
               </label>
               <p className="text-sm text-gray-900">{item.emissor}</p>
             </div>

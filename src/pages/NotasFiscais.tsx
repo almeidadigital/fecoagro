@@ -118,7 +118,7 @@ const NotasFiscais = () => {
       if (numericValue && /^\d+$/.test(numericValue))
         andFilters.push({
           column: 'numero_nota',
-          value: numericValue,
+          value: Number(numericValue),
         })
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
         andFilters,

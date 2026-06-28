@@ -104,7 +104,7 @@ export async function fetchWithFilters<T>(
     eqValue?: string
     andFilters?: Array<{
       column: string
-      value: string
+      value: string | number
       isText?: boolean
       textCast?: boolean
     }>
