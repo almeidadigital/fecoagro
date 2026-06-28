@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, FileUp } from 'lucide-react'
+import { Plus, FileUp, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteRecord } from '@/services/crudService'
 import { TransactionViewDialog } from '@/components/transactions/TransactionViewDialog'
@@ -22,6 +22,18 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import AccessDenied from '@/pages/AccessDenied'
+import {
+  exportToCsv,
+  buildExportFilename,
+  formatCurrencyNumber,
+  formatDateBR,
+} from '@/lib/export'
+import {
+  formatAtividade,
+  formatCentroCusto,
+  formatPlanoConta,
+  formatNotaFiscal,
+} from '@/lib/relational-format'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,6 +130,37 @@ const Critica = () => {
 
   const showLoading = loading || !initialized
 
+  const handleExport = () => {
+    if (transactions.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = [
+      'Data',
+      'Histórico',
+      'Valor',
+      'Status',
+      'Atividade',
+      'Centro de Custos',
+      'Plano de Contas',
+      'Nota Fiscal',
+      'Reconciliado',
+    ]
+    const rows = transactions.map((t) => [
+      formatDateBR(t.date),
+      t.historico || '',
+      formatCurrencyNumber(t.amount),
+      t.status || '',
+      formatAtividade(t.atividade_id, atividades),
+      formatCentroCusto(t.centro_custo_id, centroCustos),
+      formatPlanoConta(t.plano_conta_id, planoContas),
+      formatNotaFiscal(t.nota_fiscal_id, notasFiscais),
+      t.reconciled ? 'Sim' : 'Não',
+    ])
+    exportToCsv(buildExportFilename('critica'), headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -133,6 +176,10 @@ const Critica = () => {
           <Button variant="outline" onClick={() => setIsPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" />
             Importar PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar
           </Button>
           <Button
             onClick={handleCreate}
