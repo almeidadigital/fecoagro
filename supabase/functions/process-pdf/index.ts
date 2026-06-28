@@ -2,7 +2,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from '@supabase/supabase-js'
 import { corsHeaders } from '../_shared/cors.ts'
 
-const FECOAGRO_LOGO = 'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
+const FECOAGRO_LOGO =
+  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
 
 async function extractPdfText(data: Uint8Array): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist')
@@ -39,9 +40,13 @@ function parseNotasFiscais(text: string, userId: string) {
     records.push({
       user_id: userId,
       numero_nota: numeros[i] || `IMP-${Date.now()}-${i}`,
-      data_emissao: datas[i] ? `${datas[i][3]}-${datas[i][2]}-${datas[i][1]}` : new Date().toISOString().split('T')[0],
+      data_emissao: datas[i]
+        ? `${datas[i][3]}-${datas[i][2]}-${datas[i][1]}`
+        : new Date().toISOString().split('T')[0],
       emissor: 'Importado via PDF',
-      valor_total: valores[i] ? parseFloat(valores[i][1].replace(/\./g, '').replace(',', '.')) : 0,
+      valor_total: valores[i]
+        ? parseFloat(valores[i][1].replace(/\./g, '').replace(',', '.'))
+        : 0,
       status: 'pendente',
     })
   }
@@ -54,7 +59,13 @@ function parseRazao(text: string, userId: string) {
   const valuePattern = /([\d.,]+)/g
   const contas = [...text.matchAll(contaPattern)]
   for (let i = 0; i < Math.min(contas.length, 20); i++) {
-    const valor = parseFloat((contas[i].input || '').substring(contas[i].index).match(/[\d.,]+/)?.[0]?.replace(/\./g, '').replace(',', '.') || '0')
+    const valor = parseFloat(
+      (contas[i].input || '')
+        .substring(contas[i].index)
+        .match(/[\d.,]+/)?.[0]
+        ?.replace(/\./g, '')
+        .replace(',', '.') || '0',
+    )
     records.push({
       user_id: userId,
       data: new Date().toISOString().split('T')[0],
@@ -81,7 +92,9 @@ function parseBancos(text: string, userId: string) {
       banco: nomes[i] ? nomes[i][1].trim().substring(0, 50) : `Banco ${i + 1}`,
       agencia: '0001',
       conta_corrente: `${10000 + i}`,
-      saldo_atual: valores[i] ? parseFloat(valores[i][1].replace(/\./g, '').replace(',', '.')) : 0,
+      saldo_atual: valores[i]
+        ? parseFloat(valores[i][1].replace(/\./g, '').replace(',', '.'))
+        : 0,
     })
   }
   return records
@@ -114,19 +127,25 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     )
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser()
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -136,20 +155,26 @@ Deno.serve(async (req) => {
 
     const { filePath, entityType } = await req.json()
     if (!filePath || !entityType) {
-      return new Response(JSON.stringify({ error: 'filePath and entityType are required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'filePath and entityType are required' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    const { data: fileData, error: downloadError } = await supabaseClient
-      .storage.from('imports').download(filePath)
+    const { data: fileData, error: downloadError } =
+      await supabaseClient.storage.from('imports').download(filePath)
 
     if (downloadError || !fileData) {
-      return new Response(JSON.stringify({ error: 'Failed to download file' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'Failed to download file' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const pdfBytes = new Uint8Array(await fileData.arrayBuffer())
@@ -158,18 +183,22 @@ Deno.serve(async (req) => {
       extractedText = await extractPdfText(pdfBytes)
     } catch (parseError) {
       console.error('PDF parse error:', parseError)
-      return new Response(JSON.stringify({
-        error: 'Failed to parse PDF. Ensure the file is a valid PDF document.',
-        logo: FECOAGRO_LOGO,
-      }), {
-        status: 422,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          error:
+            'Failed to parse PDF. Ensure the file is a valid PDF document.',
+          logo: FECOAGRO_LOGO,
+        }),
+        {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     let records: any[] = []
@@ -196,33 +225,47 @@ Deno.serve(async (req) => {
     }
 
     if (records.length === 0) {
-      return new Response(JSON.stringify({
-        message: 'No records could be extracted from the PDF.',
-        extractedTextLength: extractedText.length,
-        recordsInserted: 0,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          message: 'No records could be extracted from the PDF.',
+          extractedTextLength: extractedText.length,
+          recordsInserted: 0,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const { data: inserted, error: insertError } = await adminClient
-      .from(tableName).insert(records).select()
+      .from(tableName)
+      .insert(records)
+      .select()
 
     if (insertError) {
       console.error('Insert error:', insertError)
-      return new Response(JSON.stringify({ error: 'Failed to insert records', detail: insertError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to insert records',
+          detail: insertError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    return new Response(JSON.stringify({
-      message: 'PDF processed successfully',
-      recordsInserted: inserted?.length || 0,
-      entityType,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({
+        message: 'PDF processed successfully',
+        recordsInserted: inserted?.length || 0,
+        entityType,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   } catch (error) {
     console.error('Error in process-pdf:', error)
     return new Response(JSON.stringify({ error: error.message }), {

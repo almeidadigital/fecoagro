@@ -13,9 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
-
-const FECOAGRO_LOGO =
-  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
+import { FecoagroLogo } from '@/components/FecoagroLogo'
 
 const SidebarItem = ({
   icon: Icon,
@@ -79,11 +77,7 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#F5F8F5] border-r border-green-100 p-6 flex flex-col z-40 hidden md:flex">
       <div className="flex items-center gap-3 mb-10 px-2">
-        <img
-          src={FECOAGRO_LOGO}
-          alt="Fecoagro"
-          className="h-10 w-auto object-contain"
-        />
+        <FecoagroLogo linkTo="/" />
       </div>
 
       <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">

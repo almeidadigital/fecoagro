@@ -14,9 +14,7 @@ import {
 } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
-
-const FECOAGRO_LOGO =
-  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
+import { FecoagroLogo } from '@/components/FecoagroLogo'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -49,11 +47,7 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-elevation">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <img
-              src={FECOAGRO_LOGO}
-              alt="Fecoagro"
-              className="h-12 w-auto object-contain"
-            />
+            <FecoagroLogo className="h-12" />
           </div>
           <CardTitle className="text-2xl font-bold text-center text-gray-900">
             Gestão Contábil

@@ -3,9 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
-
-const FECOAGRO_LOGO =
-  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
+import { FecoagroLogo } from '@/components/FecoagroLogo'
 
 export function Header() {
   const { user } = useAuth()
@@ -15,10 +13,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 w-full bg-[#F8F9FB]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-4 flex-1">
-        <img
-          src={FECOAGRO_LOGO}
-          alt="Fecoagro"
-          className="h-8 w-auto object-contain flex-shrink-0 md:hidden"
+        <FecoagroLogo
+          linkTo="/"
+          className="h-8 flex-shrink-0"
+          showOnDesktop={false}
         />
         <div className="hidden md:block flex-1 max-w-md">
           <div className="relative">
