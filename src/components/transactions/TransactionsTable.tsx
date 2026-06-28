@@ -24,6 +24,17 @@ const formatCurrency = (v: number) =>
     currency: 'BRL',
   }).format(v)
 
+const safeFormatDate = (value: string | null | undefined): string => {
+  if (!value) return 'N/A'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'N/A'
+  try {
+    return format(parsed, 'dd/MM/yyyy')
+  } catch {
+    return 'N/A'
+  }
+}
+
 export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
   if (data.length === 0) {
     return (
@@ -51,7 +62,7 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
           {data.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="text-gray-600 text-sm">
-                {format(item.data, 'dd/MM/yyyy')}
+                {safeFormatDate(item.data)}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
