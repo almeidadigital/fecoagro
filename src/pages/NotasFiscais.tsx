@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, FileUp, Download, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -34,6 +34,12 @@ import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { NotaFiscalViewDialog } from '@/components/NotaFiscalViewDialog'
 import { NotaFiscal } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
+import {
+  exportToCsv,
+  buildExportFilename,
+  formatCurrencyNumber,
+  formatDateBR,
+} from '@/lib/export'
 import { toast } from 'sonner'
 
 const formatCurrency = (v: number) =>
@@ -108,6 +114,29 @@ const NotasFiscais = () => {
     setViewOpen(true)
   }
 
+  const handleExport = () => {
+    if (data.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = [
+      'Número da Nota',
+      'Emissor',
+      'Data de Emissão',
+      'Valor Total',
+      'Status',
+    ]
+    const rows = data.map((item) => [
+      item.numero_nota,
+      item.emissor,
+      formatDateBR(item.data_emissao),
+      formatCurrencyNumber(item.valor_total),
+      item.status,
+    ])
+    exportToCsv(buildExportFilename('notas_fiscais'), headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -120,6 +149,9 @@ const NotasFiscais = () => {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Nova Nota

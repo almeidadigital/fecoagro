@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Landmark,
   FileUp,
+  Download,
   CheckCircle2,
   Clock,
   Link2,
@@ -28,6 +29,12 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { ReconciliationSheet } from '@/components/ReconciliationSheet'
+import {
+  exportToCsv,
+  buildExportFilename,
+  formatCurrencyNumber,
+  formatDateBR,
+} from '@/lib/export'
 
 export default function Extratos() {
   const [bancos, setBancos] = useState<Banco[]>([])
@@ -93,6 +100,33 @@ export default function Extratos() {
     setReconcileOpen(true)
   }
 
+  const handleExport = () => {
+    if (extratos.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = [
+      'Data',
+      'Descrição',
+      'Valor',
+      'Tipo',
+      'Banco (ID - Nome)',
+      'Status (Reconciliado)',
+    ]
+    const rows = extratos.map((e) => [
+      formatDateBR(e.data),
+      e.descricao,
+      formatCurrencyNumber(e.valor),
+      e.tipo === 'credit' ? 'Crédito' : 'Débito',
+      selectedBanco
+        ? `${selectedBanco.id} - ${selectedBanco.banco}`
+        : String(e.banco_id),
+      e.reconciled ? 'Reconciliado' : 'Pendente',
+    ])
+    exportToCsv(buildExportFilename('extratos'), headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   if (loading && extratos.length === 0 && !selectedBancoId) {
     return (
       <div className="flex justify-center py-10">
@@ -112,9 +146,14 @@ export default function Extratos() {
             Gerencie extratos e reconciliação bancária.
           </p>
         </div>
-        <Button variant="outline" onClick={() => setPdfOpen(true)}>
-          <FileUp className="w-4 h-4 mr-2" /> Importar Extrato PDF
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPdfOpen(true)}>
+            <FileUp className="w-4 h-4 mr-2" /> Importar Extrato PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

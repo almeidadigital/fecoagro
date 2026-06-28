@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Plus,
   FileUp,
+  Download,
   Edit,
   Trash2,
   Eye,
@@ -44,6 +45,12 @@ import { SearchableFilter } from '@/components/SearchableFilter'
 import { Razao, PlanoConta } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { auxiliaryService } from '@/services/auxiliaryService'
+import {
+  exportToCsv,
+  buildExportFilename,
+  formatCurrencyNumber,
+  formatDateBR,
+} from '@/lib/export'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -133,6 +140,33 @@ const RazaoPage = () => {
     setViewOpen(true)
   }
 
+  const handleExport = () => {
+    if (data.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = [
+      'Data',
+      'Conta',
+      'Descrição',
+      'Débito',
+      'Crédito',
+      'Saldo',
+      'Lote',
+    ]
+    const rows = data.map((item) => [
+      formatDateBR(item.data),
+      getContaLabel(item.plano_conta_id),
+      item.descricao,
+      formatCurrencyNumber(item.debito),
+      formatCurrencyNumber(item.credito),
+      formatCurrencyNumber(item.saldo),
+      item.lote ?? '',
+    ])
+    exportToCsv(buildExportFilename('razao'), headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   const contaOptions = planoContas.map((p) => ({
     value: String(p.id),
     label: `${p.id} - ${p.descricao}`,
@@ -156,6 +190,9 @@ const RazaoPage = () => {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
