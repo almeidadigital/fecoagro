@@ -203,7 +203,7 @@ const Critica = () => {
           />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
-            Exportar
+            Exportar CSV
           </Button>
           <Button
             onClick={handleCreate}

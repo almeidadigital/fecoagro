@@ -106,7 +106,7 @@ const CentroCustosPage = () => {
             }))}
           />
           <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" /> Exportar
+            <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
           <Button
             onClick={() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Download, Edit, Trash2, ListTree } from 'lucide-react'
+import { Plus, FileUp, Download, Edit, Trash2, ListTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { PlanoContasForm } from '@/components/forms/PlanoContasForm'
+import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { PdfExportButton } from '@/components/PdfExportButton'
 import {
   ComboboxFilter,
@@ -43,6 +44,7 @@ const PlanoContasPage = () => {
   const [data, setData] = useState<PlanoConta[]>([])
   const [loading, setLoading] = useState(true)
   const [formOpen, setFormOpen] = useState(false)
+  const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<PlanoConta | null>(null)
   const [filters, setFilters] = useState<ComboboxFilterState>({
     column: '',
@@ -96,6 +98,9 @@ const PlanoContasPage = () => {
           <p className="text-gray-500">Gerencie seu plano de contas.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPdfOpen(true)}>
+            <FileUp className="w-4 h-4 mr-2" /> Importar PDF
+          </Button>
           <PdfExportButton
             title="Plano de Contas"
             columns={[
@@ -112,7 +117,7 @@ const PlanoContasPage = () => {
             }))}
           />
           <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" /> Exportar
+            <Download className="w-4 h-4 mr-2" /> Exportar CSV
           </Button>
           <Button
             onClick={() => {
@@ -239,6 +244,12 @@ const PlanoContasPage = () => {
         open={formOpen}
         onOpenChange={setFormOpen}
         editItem={editItem}
+        onSuccess={loadData}
+      />
+      <PdfImportModal
+        open={pdfOpen}
+        onOpenChange={setPdfOpen}
+        entityType="plano_contas"
         onSuccess={loadData}
       />
     </div>

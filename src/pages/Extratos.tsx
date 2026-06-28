@@ -149,10 +149,7 @@ export default function Extratos() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
-            <FileUp className="w-4 h-4 mr-2" /> Importar Extrato PDF
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" /> Exportar
+            <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
           <PdfExportButton
             title="Extratos Bancários"
@@ -171,6 +168,9 @@ export default function Extratos() {
               status: e.reconciled ? 'Reconciliado' : 'Pendente',
             }))}
           />
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar CSV
+          </Button>
         </div>
       </div>
 
