@@ -7,6 +7,7 @@ import {
   Trash2,
   Eye,
   Calendar as CalendarIcon,
+  X,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -240,44 +241,59 @@ const RazaoPage = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 flex-wrap">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                'w-full md:w-[260px] justify-start text-left font-normal bg-white',
-                !filters.dateRange && 'text-muted-foreground',
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {filters.dateRange?.from ? (
-                filters.dateRange.to ? (
-                  <>
-                    {format(filters.dateRange.from, 'dd/MM/yyyy')} -{' '}
-                    {format(filters.dateRange.to, 'dd/MM/yyyy')}
-                  </>
+        <div className="flex gap-2 items-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'w-full md:w-[260px] justify-start text-left font-normal bg-white',
+                  !filters.dateRange && 'text-muted-foreground',
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.dateRange?.from ? (
+                  filters.dateRange.to ? (
+                    <>
+                      {format(filters.dateRange.from, 'dd/MM/yyyy')} -{' '}
+                      {format(filters.dateRange.to, 'dd/MM/yyyy')}
+                    </>
+                  ) : (
+                    format(filters.dateRange.from, 'dd/MM/yyyy')
+                  )
                 ) : (
-                  format(filters.dateRange.from, 'dd/MM/yyyy')
-                )
-              ) : (
-                <span>Filtrar por data</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={filters.dateRange?.from}
-              selected={filters.dateRange}
-              onSelect={(range) =>
-                setFilters((prev) => ({ ...prev, dateRange: range }))
+                  <span>Filtrar por data</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={filters.dateRange?.from}
+                selected={filters.dateRange}
+                onSelect={(range) =>
+                  setFilters((prev) => ({ ...prev, dateRange: range }))
+                }
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
+          {filters.dateRange && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0"
+              onClick={() =>
+                setFilters((prev) => ({ ...prev, dateRange: undefined }))
               }
-              numberOfMonths={2}
-              locale={ptBR}
-            />
-          </PopoverContent>
-        </Popover>
+              title="Limpar filtro de data"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <SearchableFilter
           options={contaOptions}
           value={filters.conta}

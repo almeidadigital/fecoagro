@@ -1,5 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Download, Edit, Trash2, Eye } from 'lucide-react'
+import {
+  Plus,
+  FileUp,
+  Download,
+  Edit,
+  Trash2,
+  Eye,
+  Calendar as CalendarIcon,
+  X,
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { DateRange } from 'react-day-picker'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -75,6 +94,7 @@ const NotasFiscais = () => {
   const [numeroFilter, setNumeroFilter] = useState('')
   const [emissorFilter, setEmissorFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const { visibleColumns, toggleColumn } = useColumnVisibility(
     'notas-fiscais',
     nfColumns.map((c) => c.key),
@@ -100,6 +120,9 @@ const NotasFiscais = () => {
         andFilters,
         eqColumn: statusFilter !== 'all' ? 'status' : undefined,
         eqValue: statusFilter !== 'all' ? statusFilter : undefined,
+        dateColumn: 'data_emissao',
+        dateFrom: dateRange?.from,
+        dateTo: dateRange?.to,
       })
       setData(result)
     } catch {
@@ -107,7 +130,7 @@ const NotasFiscais = () => {
     } finally {
       setLoading(false)
     }
-  }, [emissorFilter, numeroFilter, statusFilter])
+  }, [emissorFilter, numeroFilter, statusFilter, dateRange])
 
   useEffect(() => {
     const timer = setTimeout(() => loadData(), 300)
@@ -194,7 +217,61 @@ const NotasFiscais = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 items-end">
+      <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+        <div className="w-full sm:w-auto">
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Data de Emissão
+          </label>
+          <div className="flex gap-2 items-center">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full sm:w-[260px] justify-start text-left font-normal bg-white',
+                    !dateRange && 'text-muted-foreground',
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, 'dd/MM/yyyy')} -{' '}
+                        {format(dateRange.to, 'dd/MM/yyyy')}
+                      </>
+                    ) : (
+                      format(dateRange.from, 'dd/MM/yyyy')
+                    )
+                  ) : (
+                    <span>Filtrar por data</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+            {dateRange && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setDateRange(undefined)}
+                title="Limpar filtro de data"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
         <div className="flex-1 w-full">
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Número
