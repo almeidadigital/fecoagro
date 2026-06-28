@@ -21,18 +21,32 @@ export interface Categoria {
 
 export interface Transacao {
   id: string
-  data: Date
+  user_id: string
+  date: string
+  description: string
+  category: string
+  amount: number
+  payment_method: string
+  lote: number | null
+  centro_custo_id: number | null
+  atividade_id: number | null
+  plano_conta_id: number | null
+  nota_fiscal_id: number | null
+  reconciled: boolean
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface ExtratoBancario {
+  id: number
+  user_id: string
+  data: string
   descricao: string
   valor: number
-  categoria_id?: string
-  tipo_id?: TipoTransacao
-  forma_pagamento_id?: FormaPagamento
-  observacoes?: string
-  centro_custo_id?: number
-  atividade_id?: number
-  plano_conta_id?: number
-  nota_fiscal_id?: string
-  reconciled?: boolean
+  tipo: 'debit' | 'credit'
+  banco_id: number
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface PlanoConta {
@@ -108,7 +122,7 @@ export interface PaymentMethodDistribution {
 }
 
 export interface NotaFiscal {
-  id: string
+  id: number
   user_id: string
   numero_nota: string
   data_emissao: string
@@ -120,11 +134,13 @@ export interface NotaFiscal {
 }
 
 export interface Razao {
-  id: string
+  id: number
   user_id: string
   data: string
   conta: string
   descricao: string
+  historico?: string | null
+  lote?: number | null
   debito: number
   credito: number
   saldo: number

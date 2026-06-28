@@ -5,36 +5,40 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
-import { transactionService } from '@/services/transactionService'
+import { Transacao } from '@/lib/types'
 import { ComboboxFilterState } from '@/components/ComboboxFilter'
-import { Transacao, Role } from '@/lib/types'
-import { useAuth } from '@/hooks/use-auth'
+import { fetchTransactions } from '@/services/transactionService'
 
 interface TransactionStoreType {
   transactions: Transacao[]
+  fetchTransactions: (filters: ComboboxFilterState) => Promise<void>
   loading: boolean
   initialized: boolean
-  fetchTransactions: (filters: ComboboxFilterState) => Promise<void>
 }
 
 const TransactionContext = createContext<TransactionStoreType | undefined>(
   undefined,
 )
 
-export const TransactionProvider = ({ children }: { children: ReactNode }) => {
-  const { role } = useAuth()
+export function useTransactionStore() {
+  const context = useContext(TransactionContext)
+  if (!context)
+    throw new Error(
+      'useTransactionStore must be used within TransactionProvider',
+    )
+  return context
+}
+
+export function TransactionProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transacao[]>([])
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
-  const fetchTransactions = useCallback(
+  const fetchTransactionsData = useCallback(
     async (filters: ComboboxFilterState) => {
       try {
         setLoading(true)
-        const data = await transactionService.fetchTransactions(
-          filters,
-          (role as Role) || 'visitante',
-        )
+        const data = await fetchTransactions(filters)
         setTransactions(data)
       } catch {
         setTransactions([])
@@ -43,25 +47,21 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         setInitialized(true)
       }
     },
-    [role],
+    [],
   )
 
   return (
     <TransactionContext.Provider
-      value={{ transactions, loading, initialized, fetchTransactions }}
+      value={{
+        transactions,
+        fetchTransactions: fetchTransactionsData,
+        loading,
+        initialized,
+      }}
     >
       {children}
     </TransactionContext.Provider>
   )
-}
-
-const useTransactionStore = () => {
-  const context = useContext(TransactionContext)
-  if (!context)
-    throw new Error(
-      'useTransactionStore must be used within TransactionProvider',
-    )
-  return context
 }
 
 export default useTransactionStore

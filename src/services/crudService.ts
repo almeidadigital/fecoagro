@@ -30,6 +30,26 @@ export async function createRecord<T>(
   return data as T
 }
 
+export async function createBatch<T>(
+  table: string,
+  records: Record<string, unknown>[],
+): Promise<T[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('User not authenticated')
+
+  const recordsWithUserId = records.map((r) => ({ ...r, user_id: user.id }))
+
+  const { data, error } = await supabase
+    .from(table)
+    .insert(recordsWithUserId)
+    .select()
+
+  if (error) throw error
+  return (data || []) as T[]
+}
+
 export async function updateRecord<T>(
   table: string,
   id: string | number,
