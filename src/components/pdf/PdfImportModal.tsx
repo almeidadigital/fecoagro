@@ -70,6 +70,9 @@ export function PdfImportModal({
     notas_fiscais: 'Notas Fiscais',
     razao: 'Razão',
     bancos: 'Bancos',
+    centro_custos: 'Centro de Custos',
+    atividades: 'Atividades',
+    plano_contas: 'Plano de Contas',
   }
 
   return (

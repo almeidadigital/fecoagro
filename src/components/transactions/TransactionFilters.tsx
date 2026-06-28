@@ -20,12 +20,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { TipoTransacao, FormaPagamento } from '@/lib/types'
+import { FormaPagamento } from '@/lib/types'
 import useTransactionStore from '@/stores/useTransactionStore'
 
 export interface FilterState {
   search: string
-  type: string
   category: string
   paymentMethod: string
   dateRange: DateRange | undefined
@@ -45,7 +44,6 @@ export function TransactionFilters({
   const clearFilters = () => {
     setFilters({
       search: '',
-      type: 'all',
       category: 'all',
       paymentMethod: 'all',
       dateRange: undefined,
@@ -54,7 +52,6 @@ export function TransactionFilters({
 
   const hasActiveFilters =
     filters.search !== '' ||
-    filters.type !== 'all' ||
     filters.category !== 'all' ||
     filters.paymentMethod !== 'all' ||
     filters.dateRange !== undefined
@@ -62,7 +59,6 @@ export function TransactionFilters({
   return (
     <div className="flex flex-col gap-4 mb-6">
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Search */}
         <div className="flex-1">
           <Input
             placeholder="Buscar descrições..."
@@ -73,8 +69,6 @@ export function TransactionFilters({
             className="w-full bg-white"
           />
         </div>
-
-        {/* Date Range */}
         <div className="w-full md:w-[260px]">
           <Popover>
             <PopoverTrigger asChild>
@@ -120,25 +114,6 @@ export function TransactionFilters({
 
       <div className="flex flex-wrap items-center gap-3">
         <Filter className="w-4 h-4 text-gray-500" />
-
-        {/* Type Filter */}
-        <Select
-          value={filters.type}
-          onValueChange={(val) =>
-            setFilters((prev) => ({ ...prev, type: val }))
-          }
-        >
-          <SelectTrigger className="w-[140px] bg-white h-9 text-xs">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Tipos</SelectItem>
-            <SelectItem value={TipoTransacao.Receita}>Receita</SelectItem>
-            <SelectItem value={TipoTransacao.Despesa}>Despesa</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Category Filter */}
         <Select
           value={filters.category}
           onValueChange={(val) =>
@@ -157,8 +132,6 @@ export function TransactionFilters({
             ))}
           </SelectContent>
         </Select>
-
-        {/* Payment Method Filter */}
         <Select
           value={filters.paymentMethod}
           onValueChange={(val) =>
@@ -177,7 +150,6 @@ export function TransactionFilters({
             ))}
           </SelectContent>
         </Select>
-
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -185,8 +157,7 @@ export function TransactionFilters({
             onClick={clearFilters}
             className="ml-auto h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
           >
-            <X className="mr-2 h-3 w-3" />
-            Limpar Filtros
+            <X className="mr-2 h-3 w-3" /> Limpar Filtros
           </Button>
         )}
       </div>

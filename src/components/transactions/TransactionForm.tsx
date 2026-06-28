@@ -39,25 +39,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Transacao, TipoTransacao, FormaPagamento } from '@/lib/types'
+import { Transacao, FormaPagamento } from '@/lib/types'
 import useTransactionStore from '@/stores/useTransactionStore'
 import { toast } from 'sonner'
 
 const formSchema = z.object({
-  data: z.date({
-    required_error: 'Data é obrigatória',
-  }),
-  descricao: z.string().min(2, {
-    message: 'A descrição deve ter pelo menos 2 caracteres.',
-  }),
-  valor: z.coerce.number().min(0.01, {
-    message: 'O valor deve ser maior que 0.',
-  }),
+  data: z.date({ required_error: 'Data é obrigatória' }),
+  centro_custo_id: z.string().optional(),
+  atividade_id: z.string().optional(),
+  plano_conta_id: z.string().optional(),
+  descricao: z
+    .string()
+    .min(2, { message: 'A descrição deve ter pelo menos 2 caracteres.' }),
+  valor: z.coerce
+    .number()
+    .min(0.01, { message: 'O valor deve ser maior que 0.' }),
   categoria_id: z.string({
     required_error: 'Por favor selecione uma categoria.',
-  }),
-  tipo_id: z.nativeEnum(TipoTransacao, {
-    required_error: 'Por favor selecione um tipo.',
   }),
   forma_pagamento_id: z.nativeEnum(FormaPagamento, {
     required_error: 'Por favor selecione uma forma de pagamento.',
@@ -76,8 +74,14 @@ export function TransactionForm({
   onOpenChange,
   transactionToEdit,
 }: TransactionFormProps) {
-  const { categories, addTransaction, updateTransaction } =
-    useTransactionStore()
+  const {
+    categories,
+    centroCustos,
+    atividades,
+    planoContas,
+    addTransaction,
+    updateTransaction,
+  } = useTransactionStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -87,7 +91,9 @@ export function TransactionForm({
       valor: 0,
       observacoes: '',
       categoria_id: '',
-      tipo_id: TipoTransacao.Despesa,
+      centro_custo_id: '',
+      atividade_id: '',
+      plano_conta_id: '',
       forma_pagamento_id: FormaPagamento.CartaoCredito,
       data: new Date(),
     },
@@ -100,7 +106,9 @@ export function TransactionForm({
         descricao: transactionToEdit.descricao,
         valor: transactionToEdit.valor,
         categoria_id: transactionToEdit.categoria_id,
-        tipo_id: transactionToEdit.tipo_id,
+        centro_custo_id: transactionToEdit.centro_custo_id || '',
+        atividade_id: transactionToEdit.atividade_id || '',
+        plano_conta_id: transactionToEdit.plano_conta_id || '',
         forma_pagamento_id: transactionToEdit.forma_pagamento_id,
         observacoes: transactionToEdit.observacoes || '',
       })
@@ -110,7 +118,9 @@ export function TransactionForm({
         valor: 0,
         observacoes: '',
         categoria_id: '',
-        tipo_id: TipoTransacao.Despesa,
+        centro_custo_id: '',
+        atividade_id: '',
+        plano_conta_id: '',
         forma_pagamento_id: FormaPagamento.CartaoCredito,
         data: new Date(),
       })
@@ -122,15 +132,15 @@ export function TransactionForm({
       setIsSubmitting(true)
       if (transactionToEdit) {
         await updateTransaction(transactionToEdit.id, values)
-        toast.success('Transação atualizada com sucesso')
+        toast.success('Crítica atualizada com sucesso')
       } else {
         await addTransaction(values)
-        toast.success('Transação criada com sucesso')
+        toast.success('Crítica criada com sucesso')
       }
       onOpenChange(false)
       form.reset()
-    } catch (error) {
-      toast.error('Falha ao salvar transação')
+    } catch {
+      toast.error('Falha ao salvar crítica')
     } finally {
       setIsSubmitting(false)
     }
@@ -141,45 +151,16 @@ export function TransactionForm({
       <SheetContent className="overflow-y-auto sm:max-w-md w-full">
         <SheetHeader className="mb-6">
           <SheetTitle>
-            {transactionToEdit ? 'Editar Transação' : 'Nova Transação'}
+            {transactionToEdit ? 'Editar Crítica' : 'Nova Crítica'}
           </SheetTitle>
           <SheetDescription>
             {transactionToEdit
-              ? 'Faça alterações na sua transação aqui.'
-              : 'Adicione uma nova transação aos seus registros.'}
+              ? 'Faça alterações na sua crítica aqui.'
+              : 'Adicione uma nova crítica aos seus registros.'}
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="tipo_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(TipoTransacao).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="data"
@@ -225,6 +206,90 @@ export function TransactionForm({
 
             <FormField
               control={form.control}
+              name="centro_custo_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Centro de Custo</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {centroCustos.map((cc) => (
+                        <SelectItem key={cc.id} value={cc.id}>
+                          {cc.centro_de_custos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="atividade_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Atividade</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {atividades.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.atividade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="plano_conta_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição da Conta</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {planoContas.map((pc) => (
+                        <SelectItem key={pc.id} value={pc.id}>
+                          {pc.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="descricao"
               render={({ field }) => (
                 <FormItem>
@@ -251,18 +316,13 @@ export function TransactionForm({
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="categoria_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione..." />
@@ -288,11 +348,7 @@ export function TransactionForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Forma de Pagamento</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o método" />
@@ -343,7 +399,7 @@ export function TransactionForm({
                 ) : transactionToEdit ? (
                   'Salvar Alterações'
                 ) : (
-                  'Criar Transação'
+                  'Criar Crítica'
                 )}
               </Button>
             </SheetFooter>

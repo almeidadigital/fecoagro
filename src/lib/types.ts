@@ -27,9 +27,38 @@ export interface Transacao {
   descricao: string
   valor: number
   categoria_id: string
-  tipo_id: TipoTransacao
+  tipo_id?: TipoTransacao
   forma_pagamento_id: FormaPagamento
   observacoes?: string
+  centro_custo_id?: string
+  atividade_id?: string
+  plano_conta_id?: string
+}
+
+export interface PlanoConta {
+  id: string
+  user_id: string
+  classificacao: string
+  descricao: string
+  tipo: 'analitica' | 'sintetica'
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface CentroCusto {
+  id: string
+  user_id: string
+  centro_de_custos: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface Atividade {
+  id: string
+  user_id: string
+  atividade: string
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface User {
@@ -119,6 +148,7 @@ export interface UserProfile {
   id: string
   full_name: string | null
   role: Role
+  avatar_url?: string | null
   created_at?: string | null
   updated_at?: string | null
 }

@@ -1,6 +1,13 @@
 import { supabase } from '@/lib/supabase/client'
 
-export type EntityType = 'transactions' | 'notas_fiscais' | 'razao' | 'bancos'
+export type EntityType =
+  | 'transactions'
+  | 'notas_fiscais'
+  | 'razao'
+  | 'bancos'
+  | 'centro_custos'
+  | 'atividades'
+  | 'plano_contas'
 
 export async function uploadPdf(
   file: File,

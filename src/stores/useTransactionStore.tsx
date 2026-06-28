@@ -2,24 +2,36 @@ import React, {
   createContext,
   useContext,
   useState,
+  useEffect,
   ReactNode,
   useCallback,
   useMemo,
   useRef,
 } from 'react'
-import { Transacao, Categoria } from '@/lib/types'
+import {
+  Transacao,
+  Categoria,
+  CentroCusto,
+  Atividade,
+  PlanoConta,
+} from '@/lib/types'
 import { mockCategories } from '@/lib/data'
 import { FilterState } from '@/components/transactions/TransactionFilters'
 import { transactionService } from '@/services/transactionService'
+import { auxiliaryService } from '@/services/auxiliaryService'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 
 interface TransactionState {
   transactions: Transacao[]
   categories: Categoria[]
+  centroCustos: CentroCusto[]
+  atividades: Atividade[]
+  planoContas: PlanoConta[]
   loading: boolean
   initialized: boolean
   fetchTransactions: (filters: FilterState) => Promise<void>
+  fetchAuxiliaryData: () => Promise<void>
   addTransaction: (transaction: Omit<Transacao, 'id'>) => Promise<void>
   updateTransaction: (
     id: string,
@@ -35,32 +47,31 @@ const TransactionContext = createContext<TransactionState | undefined>(
 export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transacao[]>([])
   const [categories] = useState<Categoria[]>(mockCategories)
+  const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
+  const [atividades, setAtividades] = useState<Atividade[]>([])
+  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const { role } = useAuth()
 
-  // Ref to track the latest fetch request ID for race condition prevention
   const fetchIdRef = useRef(0)
 
   const fetchTransactions = useCallback(
     async (filters: FilterState) => {
-      // If no role is set, we shouldn't fetch yet or invalid state
       if (!role) return
 
       const currentId = ++fetchIdRef.current
       try {
         setLoading(true)
-        // Pass the user role to the service layer for conditional fetching logic
         const data = await transactionService.fetchTransactions(filters, role)
 
-        // Only update state if this is the most recent request
         if (currentId === fetchIdRef.current) {
           setTransactions(data)
         }
       } catch (error) {
         if (currentId === fetchIdRef.current) {
           console.error('Error fetching transactions:', error)
-          toast.error('Erro ao carregar transações')
+          toast.error('Erro ao carregar críticas')
         }
       } finally {
         if (currentId === fetchIdRef.current) {
@@ -72,6 +83,27 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     [role],
   )
 
+  const fetchAuxiliaryData = useCallback(async () => {
+    try {
+      const [cc, atv, pc] = await Promise.all([
+        auxiliaryService.fetchCentroCustos(),
+        auxiliaryService.fetchAtividades(),
+        auxiliaryService.fetchPlanoContas(),
+      ])
+      setCentroCustos(cc)
+      setAtividades(atv)
+      setPlanoContas(pc)
+    } catch (error) {
+      console.error('Error fetching auxiliary data:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (role && role !== 'visitante') {
+      fetchAuxiliaryData()
+    }
+  }, [role, fetchAuxiliaryData])
+
   const addTransaction = useCallback(
     async (transaction: Omit<Transacao, 'id'>) => {
       try {
@@ -80,7 +112,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         setTransactions((prev) => [newTransaction, ...prev])
       } catch (error) {
         console.error('Error adding transaction:', error)
-        throw error // Propagate error to form
+        throw error
       }
     },
     [],
@@ -98,7 +130,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         )
       } catch (error) {
         console.error('Error updating transaction:', error)
-        throw error // Propagate error to form
+        throw error
       }
     },
     [],
@@ -108,10 +140,10 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     try {
       await transactionService.deleteTransaction(id)
       setTransactions((prev) => prev.filter((t) => t.id !== id))
-      toast.success('Transação excluída com sucesso')
+      toast.success('Crítica excluída com sucesso')
     } catch (error) {
       console.error('Error deleting transaction:', error)
-      toast.error('Erro ao excluir transação')
+      toast.error('Erro ao excluir crítica')
     }
   }, [])
 
@@ -119,9 +151,13 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       transactions,
       categories,
+      centroCustos,
+      atividades,
+      planoContas,
       loading,
       initialized,
       fetchTransactions,
+      fetchAuxiliaryData,
       addTransaction,
       updateTransaction,
       deleteTransaction,
@@ -129,9 +165,13 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     [
       transactions,
       categories,
+      centroCustos,
+      atividades,
+      planoContas,
       loading,
       initialized,
       fetchTransactions,
+      fetchAuxiliaryData,
       addTransaction,
       updateTransaction,
       deleteTransaction,

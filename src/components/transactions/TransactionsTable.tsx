@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Transacao, TipoTransacao } from '@/lib/types'
+import { Transacao } from '@/lib/types'
 import { format } from 'date-fns'
 import { Edit, Trash2 } from 'lucide-react'
 import useTransactionStore from '@/stores/useTransactionStore'
@@ -30,26 +30,39 @@ interface TransactionsTableProps {
 }
 
 export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
-  const { categories, deleteTransaction } = useTransactionStore()
+  const { centroCustos, atividades, planoContas, deleteTransaction } =
+    useTransactionStore()
 
-  const getCategoryName = (id: string) => {
-    const category = categories.find((c) => c.id === id)
-    return category ? category.nome : 'Desconhecido'
+  const getCentroCustoName = (id?: string) => {
+    if (!id) return '-'
+    const cc = centroCustos.find((c) => c.id === id)
+    return cc ? cc.centro_de_custos : '-'
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
+  const getAtividadeName = (id?: string) => {
+    if (!id) return '-'
+    const atv = atividades.find((a) => a.id === id)
+    return atv ? atv.atividade : '-'
+  }
+
+  const getPlanoContaName = (id?: string) => {
+    if (!id) return '-'
+    const pc = planoContas.find((p) => p.id === id)
+    return pc ? pc.descricao : '-'
+  }
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value)
-  }
 
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-white shadow-sm">
-        <p className="text-gray-500 mb-2">Nenhuma transação encontrada.</p>
+        <p className="text-gray-500 mb-2">Nenhuma crítica encontrada.</p>
         <p className="text-sm text-gray-400">
-          Ajuste os filtros ou adicione uma nova transação.
+          Ajuste os filtros ou adicione uma nova crítica.
         </p>
       </div>
     )
@@ -62,8 +75,9 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
           <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
             <TableHead className="w-[120px]">Data</TableHead>
             <TableHead>Descrição</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead>Tipo</TableHead>
+            <TableHead>Centro de Custo</TableHead>
+            <TableHead>Atividade</TableHead>
+            <TableHead>Descrição da Conta</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead>Forma de Pagamento</TableHead>
             <TableHead className="w-[100px] text-right">Ações</TableHead>
@@ -83,30 +97,16 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
                   variant="secondary"
                   className="font-normal text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
                 >
-                  {getCategoryName(transaction.categoria_id)}
+                  {getCentroCustoName(transaction.centro_custo_id)}
                 </Badge>
               </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={
-                    transaction.tipo_id === TipoTransacao.Receita
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : 'bg-red-50 text-red-700 border-red-200'
-                  }
-                >
-                  {transaction.tipo_id}
-                </Badge>
+              <TableCell className="text-gray-600 text-sm">
+                {getAtividadeName(transaction.atividade_id)}
               </TableCell>
-              <TableCell
-                className={
-                  'text-right font-bold ' +
-                  (transaction.tipo_id === TipoTransacao.Receita
-                    ? 'text-green-600'
-                    : 'text-gray-900')
-                }
-              >
-                {transaction.tipo_id === TipoTransacao.Despesa ? '-' : '+'}
+              <TableCell className="text-gray-600 text-sm">
+                {getPlanoContaName(transaction.plano_conta_id)}
+              </TableCell>
+              <TableCell className="text-right font-bold text-gray-900">
                 {formatCurrency(transaction.valor)}
               </TableCell>
               <TableCell className="text-gray-500 text-sm">
@@ -123,7 +123,6 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
                     <Edit className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
                   </Button>
-
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -142,7 +141,7 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                           Esta ação não pode ser desfeita. Isso excluirá
-                          permanentemente o registro da transação.
+                          permanentemente o registro da crítica.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

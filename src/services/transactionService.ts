@@ -10,9 +10,12 @@ const mapToTransacao = (row: any): Transacao => ({
   descricao: row.description,
   valor: Number(row.amount),
   categoria_id: row.category,
-  tipo_id: row.type as TipoTransacao,
+  tipo_id: row.type as TipoTransacao | undefined,
   forma_pagamento_id: row.payment_method as FormaPagamento,
   observacoes: row.notes,
+  centro_custo_id: row.centro_custo_id || undefined,
+  atividade_id: row.atividade_id || undefined,
+  plano_conta_id: row.plano_conta_id || undefined,
 })
 
 // Helper to map Transacao to DB row
@@ -22,9 +25,12 @@ const mapToRow = (transaction: Omit<Transacao, 'id'>, userId: string) => ({
   description: transaction.descricao,
   amount: transaction.valor,
   category: transaction.categoria_id,
-  type: transaction.tipo_id,
+  type: transaction.tipo_id || null,
   payment_method: transaction.forma_pagamento_id,
   notes: transaction.observacoes,
+  centro_custo_id: transaction.centro_custo_id || null,
+  atividade_id: transaction.atividade_id || null,
+  plano_conta_id: transaction.plano_conta_id || null,
 })
 
 export const transactionService = {
@@ -57,10 +63,6 @@ export const transactionService = {
       // Admin sees all, applies filters
       if (filters.search) {
         query = query.ilike('description', `%${filters.search}%`)
-      }
-
-      if (filters.type !== 'all') {
-        query = query.eq('type', filters.type)
       }
 
       if (filters.category !== 'all') {
@@ -122,6 +124,12 @@ export const transactionService = {
       updates.payment_method = transaction.forma_pagamento_id
     if (transaction.observacoes !== undefined)
       updates.notes = transaction.observacoes
+    if (transaction.centro_custo_id !== undefined)
+      updates.centro_custo_id = transaction.centro_custo_id || null
+    if (transaction.atividade_id !== undefined)
+      updates.atividade_id = transaction.atividade_id || null
+    if (transaction.plano_conta_id !== undefined)
+      updates.plano_conta_id = transaction.plano_conta_id || null
 
     const { data, error } = await supabase
       .from('transactions')
