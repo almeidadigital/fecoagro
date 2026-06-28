@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Edit, Trash2, Building2 } from 'lucide-react'
+import { Plus, FileUp, Download, Edit, Trash2, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -29,6 +29,7 @@ import {
 } from '@/components/ComboboxFilter'
 import { CentroCusto } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
+import { exportToCsv } from '@/lib/export'
 import { toast } from 'sonner'
 
 const filterColumns: ComboboxFilterColumn[] = [
@@ -70,6 +71,17 @@ const CentroCustosPage = () => {
     loadData()
   }, [loadData])
 
+  const handleExport = () => {
+    if (filteredData.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = ['ID', 'Centro de Custos']
+    const rows = filteredData.map((item) => [item.id, item.centro_de_custos])
+    exportToCsv('centro_custos_data.csv', headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -80,6 +92,9 @@ const CentroCustosPage = () => {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
           <Button
             onClick={() => {

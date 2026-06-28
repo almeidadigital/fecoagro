@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Edit, Trash2, Landmark } from 'lucide-react'
+import { Plus, FileUp, Download, Edit, Trash2, Landmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -25,6 +25,7 @@ import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { SearchableFilter } from '@/components/SearchableFilter'
 import { Banco } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
+import { exportToCsv, formatCurrencyNumber } from '@/lib/export'
 import { toast } from 'sonner'
 
 const formatCurrency = (v: number) =>
@@ -68,6 +69,23 @@ const BancosPage = () => {
     setFormOpen(true)
   }
 
+  const handleExport = () => {
+    if (filteredData.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = ['ID', 'Banco', 'Agência', 'Conta Corrente', 'Saldo Atual']
+    const rows = filteredData.map((item) => [
+      item.id,
+      item.banco,
+      item.agencia,
+      item.conta_corrente,
+      formatCurrencyNumber(item.saldo_atual),
+    ])
+    exportToCsv('bancos_data.csv', headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   const totalSaldo = data.reduce((sum, b) => sum + b.saldo_atual, 0)
 
   const bankOptions = [...new Set(data.map((b) => b.banco))].map((b) => ({
@@ -87,6 +105,9 @@ const BancosPage = () => {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" /> Nova Conta

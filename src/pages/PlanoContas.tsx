@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit, Trash2, ListTree } from 'lucide-react'
+import { Plus, Download, Edit, Trash2, ListTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -29,6 +29,7 @@ import {
 } from '@/components/ComboboxFilter'
 import { PlanoConta } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
+import { exportToCsv } from '@/lib/export'
 import { toast } from 'sonner'
 
 const filterColumns: ComboboxFilterColumn[] = [
@@ -70,6 +71,22 @@ const PlanoContasPage = () => {
     loadData()
   }, [loadData])
 
+  const handleExport = () => {
+    if (filteredData.length === 0) {
+      toast.error('Nenhum dado para exportar')
+      return
+    }
+    const headers = ['ID', 'Classificação', 'Descrição', 'Tipo']
+    const rows = filteredData.map((item) => [
+      item.id,
+      item.classificacao,
+      item.descricao,
+      item.tipo,
+    ])
+    exportToCsv('plano_contas_data.csv', headers, rows)
+    toast.success('CSV exportado com sucesso')
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -77,14 +94,19 @@ const PlanoContasPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Plano de Contas</h1>
           <p className="text-gray-500">Gerencie seu plano de contas.</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditItem(null)
-            setFormOpen(true)
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" /> Nova Conta
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportar
+          </Button>
+          <Button
+            onClick={() => {
+              setEditItem(null)
+              setFormOpen(true)
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" /> Nova Conta
+          </Button>
+        </div>
       </div>
 
       {loading ? (
