@@ -42,14 +42,14 @@ BEGIN
   IF v_user_id IS NOT NULL THEN
     UPDATE public.notas_fiscais
     SET numero_nota = 1289
-    WHERE user_id = v_user_id AND numero_nota = 0 AND emissor = 'Cooperativa Fecoagro';
+    WHERE user_id = v_user_id AND numero_nota = 0 AND fornecedor = 'Cooperativa Fecoagro';
 
     UPDATE public.notas_fiscais
     SET numero_nota = 1290
-    WHERE user_id = v_user_id AND numero_nota = 0 AND emissor = 'Fornecedor Agro LTDA';
+    WHERE user_id = v_user_id AND numero_nota = 0 AND fornecedor = 'Fornecedor Agro LTDA';
 
     UPDATE public.notas_fiscais
     SET numero_nota = 1291
-    WHERE user_id = v_user_id AND numero_nota = 0 AND emissor = 'Transportadora Sul';
+    WHERE user_id = v_user_id AND numero_nota = 0 AND fornecedor = 'Transportadora Sul';
   END IF;
 END $$;
