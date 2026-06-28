@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, FileUp, Edit, Trash2, Landmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +101,7 @@ const BancosPage = () => {
         </div>
       ) : data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-white shadow-sm">
+          <Landmark className="w-12 h-12 text-gray-300 mb-3" />
           <p className="text-gray-500 mb-2">
             Nenhuma conta bancária encontrada.
           </p>
@@ -102,81 +110,92 @@ const BancosPage = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {data.map((item) => (
-            <Card
-              key={item.id}
-              className="shadow-sm hover:shadow-md transition-shadow"
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Landmark className="w-5 h-5 text-primary" />
+        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/50">
+                <TableHead>Banco</TableHead>
+                <TableHead>Agência</TableHead>
+                <TableHead>Conta Corrente</TableHead>
+                <TableHead className="text-right">Saldo Atual</TableHead>
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Landmark className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="font-semibold text-gray-900">
+                        {item.banco}
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">{item.banco}</h3>
-                      <p className="text-xs text-gray-500">
-                        Ag: {item.agencia} • CC: {item.conta_corrente}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-primary hover:bg-primary/10"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação excluirá permanentemente a conta bancária.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={async () => {
-                              await deleteRecord('bancos', item.id)
-                              setData((prev) =>
-                                prev.filter((i) => i.id !== item.id),
-                              )
-                              toast.success('Conta excluída')
-                            }}
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-                <div className="border-t pt-3">
-                  <p className="text-xs text-gray-500 mb-1">Saldo Atual</p>
-                  <p
-                    className={`text-2xl font-bold ${item.saldo_atual >= 0 ? 'text-gray-900' : 'text-red-600'}`}
+                  </TableCell>
+                  <TableCell className="text-gray-600 font-mono text-sm">
+                    {item.agencia}
+                  </TableCell>
+                  <TableCell className="text-gray-600 font-mono text-sm">
+                    {item.conta_corrente}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-bold ${item.saldo_atual >= 0 ? 'text-gray-900' : 'text-red-600'}`}
                   >
                     {formatCurrency(item.saldo_atual)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary hover:bg-primary/10"
+                        onClick={() => handleEdit(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação excluirá permanentemente a conta
+                              bancária.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-red-600 hover:bg-red-700"
+                              onClick={async () => {
+                                await deleteRecord('bancos', item.id)
+                                setData((prev) =>
+                                  prev.filter((i) => i.id !== item.id),
+                                )
+                                toast.success('Conta excluída')
+                              }}
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 

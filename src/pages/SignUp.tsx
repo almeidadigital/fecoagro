@@ -14,49 +14,31 @@ import {
 } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
-import { emailService } from '@/services/emailService'
+
+const FECOAGRO_LOGO =
+  'https://www.fecoagro.coop.br/wp-content/uploads/2021/10/logo-top.png'
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (password !== confirmPassword) {
-      toast.error('As senhas não coincidem.')
-      return
-    }
-
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres.')
-      return
-    }
-
     setIsLoading(true)
 
     try {
       const { error } = await signUp(email, password, fullName)
       if (error) {
-        toast.error(error.message || 'Erro ao criar conta.')
+        toast.error('Erro ao cadastrar. Verifique os dados informados.')
       } else {
-        // Send welcome email immediately after successful registration
-        try {
-          await emailService.sendWelcomeEmail(email, fullName)
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError)
-          // We don't block the user flow if email fails, but we log it
-        }
-
-        toast.success('Conta criada com sucesso! Verifique seu e-mail.')
+        toast.success('Cadastro realizado com sucesso!')
         navigate('/login')
       }
-    } catch (error) {
+    } catch {
       toast.error('Ocorreu um erro inesperado.')
     } finally {
       setIsLoading(false)
@@ -64,23 +46,31 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F8F5] p-4">
+      <Card className="w-full max-w-md shadow-elevation">
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center">
+            <img
+              src={FECOAGRO_LOGO}
+              alt="Fecoagro"
+              className="h-12 w-auto object-contain"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold text-center text-gray-900">
             Criar Conta
           </CardTitle>
           <CardDescription className="text-center">
-            Preencha os dados abaixo para começar
+            Preencha seus dados para se cadastrar na plataforma
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome Completo</Label>
+              <Label htmlFor="fullName">Nome Completo</Label>
               <Input
-                id="name"
-                placeholder="Seu nome"
+                id="fullName"
+                type="text"
+                placeholder="Seu nome completo"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -102,19 +92,11 @@ export default function SignUp() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Mínimo 8 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
+                minLength={8}
               />
             </div>
           </CardContent>
@@ -123,7 +105,7 @@ export default function SignUp() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando conta...
+                  Cadastrando...
                 </>
               ) : (
                 'Cadastrar'
