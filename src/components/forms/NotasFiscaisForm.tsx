@@ -33,7 +33,7 @@ import { createRecord, updateRecord } from '@/services/crudService'
 import { toast } from 'sonner'
 
 const schema = z.object({
-  numero_nota: z.string().min(1, 'Número é obrigatório'),
+  numero_nota: z.coerce.number().min(1, 'Número é obrigatório'),
   data_emissao: z.string().min(1, 'Data é obrigatória'),
   emissor: z.string().min(2, 'Emissor é obrigatório'),
   valor_total: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
@@ -58,7 +58,7 @@ export function NotasFiscaisForm({
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
-      numero_nota: '',
+      numero_nota: 0,
       data_emissao: new Date().toISOString().split('T')[0],
       emissor: '',
       valor_total: 0,
@@ -77,7 +77,7 @@ export function NotasFiscaisForm({
       })
     } else {
       form.reset({
-        numero_nota: '',
+        numero_nota: 0,
         data_emissao: new Date().toISOString().split('T')[0],
         emissor: '',
         valor_total: 0,
@@ -127,7 +127,12 @@ export function NotasFiscaisForm({
                 <FormItem>
                   <FormLabel>Número da Nota</FormLabel>
                   <FormControl>
-                    <Input placeholder="NF-001234" {...field} />
+                    <Input
+                      type="number"
+                      step="1"
+                      placeholder="123456"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

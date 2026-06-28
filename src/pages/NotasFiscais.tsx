@@ -58,7 +58,7 @@ const NotasFiscais = () => {
     try {
       setLoading(true)
       const result = await fetchWithFilters<NotaFiscal>('notas_fiscais', {
-        searchColumns: ['numero_nota', 'emissor'],
+        searchColumns: ['emissor'],
         searchValue: filters.search,
         dateColumn: 'data_emissao',
         dateFrom: filters.dateRange?.from,
@@ -110,7 +110,7 @@ const NotasFiscais = () => {
       <GenericTableFilters
         filters={filters}
         setFilters={setFilters}
-        searchPlaceholder="Buscar por número ou emissor..."
+        searchPlaceholder="Buscar por emissor..."
         statusOptions={[
           { value: 'pendente', label: 'Pendente' },
           { value: 'aprovada', label: 'Aprovada' },

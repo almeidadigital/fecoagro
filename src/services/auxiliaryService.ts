@@ -1,5 +1,5 @@
 import { fetchAll } from '@/services/crudService'
-import { PlanoConta, CentroCusto, Atividade } from '@/lib/types'
+import { PlanoConta, CentroCusto, Atividade, NotaFiscal } from '@/lib/types'
 
 export const auxiliaryService = {
   async fetchPlanoContas(): Promise<PlanoConta[]> {
@@ -10,5 +10,8 @@ export const auxiliaryService = {
   },
   async fetchAtividades(): Promise<Atividade[]> {
     return fetchAll<Atividade>('atividades')
+  },
+  async fetchNotasFiscais(): Promise<NotaFiscal[]> {
+    return fetchAll<NotaFiscal>('notas_fiscais')
   },
 }

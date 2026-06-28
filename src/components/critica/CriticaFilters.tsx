@@ -19,13 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Atividade, CentroCusto, PlanoConta } from '@/lib/types'
+import { Atividade, CentroCusto, PlanoConta, NotaFiscal } from '@/lib/types'
 
 export interface CriticaFilterState {
   historico: string
   atividade_id: string
   centro_custo_id: string
   plano_conta_id: string
+  nota_fiscal_id: string
   status: string
   dateRange: DateRange | undefined
 }
@@ -36,6 +37,7 @@ interface CriticaFiltersProps {
   atividades: Atividade[]
   centroCustos: CentroCusto[]
   planoContas: PlanoConta[]
+  notasFiscais: NotaFiscal[]
 }
 
 const statusOptions = [
@@ -50,6 +52,7 @@ export function CriticaFilters({
   atividades,
   centroCustos,
   planoContas,
+  notasFiscais,
 }: CriticaFiltersProps) {
   const clearFilters = () => {
     setFilters({
@@ -57,6 +60,7 @@ export function CriticaFilters({
       atividade_id: '',
       centro_custo_id: '',
       plano_conta_id: '',
+      nota_fiscal_id: '',
       status: '',
       dateRange: undefined,
     })
@@ -67,6 +71,7 @@ export function CriticaFilters({
     filters.atividade_id !== '' ||
     filters.centro_custo_id !== '' ||
     filters.plano_conta_id !== '' ||
+    filters.nota_fiscal_id !== '' ||
     filters.status !== '' ||
     filters.dateRange !== undefined
 
@@ -128,6 +133,23 @@ export function CriticaFilters({
             {planoContas.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>
                 {p.descricao || p.classificacao || `Conta ${p.id}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.nota_fiscal_id}
+          onValueChange={(val) =>
+            setFilters((prev) => ({ ...prev, nota_fiscal_id: val }))
+          }
+        >
+          <SelectTrigger className="w-full md:w-[200px] bg-white">
+            <SelectValue placeholder="Nota Fiscal" />
+          </SelectTrigger>
+          <SelectContent>
+            {notasFiscais.map((nf) => (
+              <SelectItem key={nf.id} value={String(nf.id)}>
+                {nf.numero_nota}
               </SelectItem>
             ))}
           </SelectContent>

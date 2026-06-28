@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import {
   Sheet,
   SheetContent,
@@ -18,23 +28,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Transacao, PlanoConta, CentroCusto, Atividade } from '@/lib/types'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Transacao,
+  Atividade,
+  CentroCusto,
+  PlanoConta,
+  NotaFiscal,
+} from '@/lib/types'
 import { createRecord, updateRecord } from '@/services/crudService'
-import { auxiliaryService } from '@/services/auxiliaryService'
-import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-const statusOptions = [
-  { value: 'pendente', label: 'Pendente' },
-  { value: 'concluido', label: 'Concluído' },
-  { value: 'cancelado', label: 'Cancelado' },
-]
+const schema = z.object({
+  date: z.string().min(1, 'Data é obrigatória'),
+  historico: z.string().min(1, 'Histórico é obrigatório'),
+  amount: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
+  status: z.string(),
+  atividade_id: z.string().optional(),
+  centro_custo_id: z.string().optional(),
+  plano_conta_id: z.string().optional(),
+  nota_fiscal_id: z.string().optional(),
+  reconciled: z.boolean(),
+})
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  transactionToEdit?: Transacao | null
+  transactionToEdit: Transacao | null
   onSuccess: () => void
+  atividades: Atividade[]
+  centroCustos: CentroCusto[]
+  planoContas: PlanoConta[]
+  notasFiscais: NotaFiscal[]
 }
 
 export function TransactionForm({
@@ -42,78 +67,84 @@ export function TransactionForm({
   onOpenChange,
   transactionToEdit,
   onSuccess,
+  atividades,
+  centroCustos,
+  planoContas,
+  notasFiscais,
 }: Props) {
   const [submitting, setSubmitting] = useState(false)
-  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
-  const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
-  const [atividades, setAtividades] = useState<Atividade[]>([])
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [lote, setLote] = useState('')
-  const [status, setStatus] = useState('pendente')
-  const [historico, setHistorico] = useState('')
-  const [amount, setAmount] = useState('0')
-  const [planoContaId, setPlanoContaId] = useState('')
-  const [atividadeId, setAtividadeId] = useState('')
-  const [centroCustoId, setCentroCustoId] = useState('')
 
-  useEffect(() => {
-    Promise.all([
-      auxiliaryService.fetchPlanoContas(),
-      auxiliaryService.fetchCentroCustos(),
-      auxiliaryService.fetchAtividades(),
-    ])
-      .then(([pc, cc, at]) => {
-        setPlanoContas(pc)
-        setCentroCustos(cc)
-        setAtividades(at)
-      })
-      .catch(() => {})
-  }, [])
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      date: new Date().toISOString().split('T')[0],
+      historico: '',
+      amount: 0,
+      status: 'pendente',
+      atividade_id: '',
+      centro_custo_id: '',
+      plano_conta_id: '',
+      nota_fiscal_id: '',
+      reconciled: false,
+    },
+  })
 
   useEffect(() => {
     if (transactionToEdit) {
-      setDate(transactionToEdit.date)
-      setLote(transactionToEdit.lote?.toString() || '')
-      setStatus(transactionToEdit.status || 'pendente')
-      setHistorico(transactionToEdit.description || '')
-      setAmount(String(transactionToEdit.amount || 0))
-      setPlanoContaId(transactionToEdit.plano_conta_id?.toString() || '')
-      setAtividadeId(transactionToEdit.atividade_id?.toString() || '')
-      setCentroCustoId(transactionToEdit.centro_custo_id?.toString() || '')
+      form.reset({
+        date: transactionToEdit.date,
+        historico: transactionToEdit.historico || '',
+        amount: transactionToEdit.amount,
+        status: transactionToEdit.status || 'pendente',
+        atividade_id: transactionToEdit.atividade_id
+          ? String(transactionToEdit.atividade_id)
+          : '',
+        centro_custo_id: transactionToEdit.centro_custo_id
+          ? String(transactionToEdit.centro_custo_id)
+          : '',
+        plano_conta_id: transactionToEdit.plano_conta_id
+          ? String(transactionToEdit.plano_conta_id)
+          : '',
+        nota_fiscal_id: transactionToEdit.nota_fiscal_id
+          ? String(transactionToEdit.nota_fiscal_id)
+          : '',
+        reconciled: transactionToEdit.reconciled,
+      })
     } else {
-      setDate(new Date().toISOString().split('T')[0])
-      setLote('')
-      setStatus('pendente')
-      setHistorico('')
-      setAmount('0')
-      setPlanoContaId('')
-      setAtividadeId('')
-      setCentroCustoId('')
-      supabase.rpc('get_next_lote').then(({ data }) => {
-        if (data !== null && data !== undefined) setLote(String(data))
+      form.reset({
+        date: new Date().toISOString().split('T')[0],
+        historico: '',
+        amount: 0,
+        status: 'pendente',
+        atividade_id: '',
+        centro_custo_id: '',
+        plano_conta_id: '',
+        nota_fiscal_id: '',
+        reconciled: false,
       })
     }
-  }, [transactionToEdit, open])
+  }, [transactionToEdit, form, open])
 
-  const handleSubmit = async () => {
+  async function onSubmit(values: z.infer<typeof schema>) {
     try {
       setSubmitting(true)
-      if (!historico || !date) {
-        toast.error('Preencha os campos obrigatórios')
-        return
-      }
-
       const payload = {
-        date,
-        description: historico,
-        lote: lote ? Number(lote) : null,
-        status,
-        amount: Number(amount) || 0,
-        plano_conta_id: planoContaId ? Number(planoContaId) : null,
-        atividade_id: atividadeId ? Number(atividadeId) : null,
-        centro_custo_id: centroCustoId ? Number(centroCustoId) : null,
+        date: values.date,
+        historico: values.historico,
+        amount: values.amount,
+        status: values.status,
+        atividade_id: values.atividade_id ? Number(values.atividade_id) : null,
+        centro_custo_id: values.centro_custo_id
+          ? Number(values.centro_custo_id)
+          : null,
+        plano_conta_id: values.plano_conta_id
+          ? Number(values.plano_conta_id)
+          : null,
+        nota_fiscal_id: values.nota_fiscal_id
+          ? Number(values.nota_fiscal_id)
+          : null,
+        reconciled: values.reconciled,
       }
-
       if (transactionToEdit) {
         await updateRecord('critica', transactionToEdit.id, payload)
         toast.success('Crítica atualizada com sucesso')
@@ -132,7 +163,7 @@ export function TransactionForm({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg w-full">
+      <SheetContent className="overflow-y-auto sm:max-w-md w-full">
         <SheetHeader className="mb-6">
           <SheetTitle>
             {transactionToEdit ? 'Editar Crítica' : 'Nova Crítica'}
@@ -143,142 +174,209 @@ export function TransactionForm({
               : 'Adicione uma nova crítica contábil.'}
           </SheetDescription>
         </SheetHeader>
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">Data</Label>
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">Lote</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={lote}
-                onChange={(e) => setLote(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">Valor</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label className="mb-1.5 block text-sm font-medium">
-              Histórico
-            </Label>
-            <Input
-              placeholder="Descrição..."
-              value={historico}
-              onChange={(e) => setHistorico(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <Label className="mb-1.5 block text-sm font-medium">
-              Plano de Contas
-            </Label>
-            <Select value={planoContaId} onValueChange={setPlanoContaId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {planoContas.map((pc) => (
-                  <SelectItem key={pc.id} value={pc.id.toString()}>
-                    {pc.id} - {pc.descricao}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">
-                Atividade
-              </Label>
-              <Select value={atividadeId} onValueChange={setAtividadeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {atividades.map((a) => (
-                    <SelectItem key={a.id} value={a.id.toString()}>
-                      {a.id} - {a.atividade}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-sm font-medium">
-                Centro de Custos
-              </Label>
-              <Select value={centroCustoId} onValueChange={setCentroCustoId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {centroCustos.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.id} - {c.centro_de_custos}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <SheetFooter>
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full sm:w-auto"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : transactionToEdit ? (
-                'Salvar Alterações'
-              ) : (
-                'Criar Crítica'
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Button>
-          </SheetFooter>
-        </div>
+            />
+            <FormField
+              control={form.control}
+              name="historico"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Histórico</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Descrição do histórico..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="atividade_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Atividade</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {atividades.map((a) => (
+                        <SelectItem key={a.id} value={String(a.id)}>
+                          {a.atividade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="centro_custo_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Centro de Custos</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {centroCustos.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.centro_de_custos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="plano_conta_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plano de Contas</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {planoContas.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.descricao || p.classificacao || `Conta ${p.id}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nota_fiscal_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nota Fiscal</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {notasFiscais.map((nf) => (
+                        <SelectItem key={nf.id} value={String(nf.id)}>
+                          {nf.numero_nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reconciled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Reconciliado</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <SheetFooter>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full sm:w-auto"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : transactionToEdit ? (
+                  'Salvar Alterações'
+                ) : (
+                  'Criar Crítica'
+                )}
+              </Button>
+            </SheetFooter>
+          </form>
+        </Form>
       </SheetContent>
     </Sheet>
   )

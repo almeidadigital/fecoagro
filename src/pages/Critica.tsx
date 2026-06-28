@@ -12,7 +12,13 @@ import {
 import { TransactionsTable } from '@/components/transactions/TransactionsTable'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import useTransactionStore from '@/stores/useTransactionStore'
-import { Transacao, Atividade, CentroCusto, PlanoConta } from '@/lib/types'
+import {
+  Transacao,
+  Atividade,
+  CentroCusto,
+  PlanoConta,
+  NotaFiscal,
+} from '@/lib/types'
 import { useAuth } from '@/hooks/use-auth'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import AccessDenied from '@/pages/AccessDenied'
@@ -41,12 +47,14 @@ const Critica = () => {
   const [atividades, setAtividades] = useState<Atividade[]>([])
   const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
+  const [notasFiscais, setNotasFiscais] = useState<NotaFiscal[]>([])
 
   const [filters, setFilters] = useState<CriticaFilterState>({
     historico: '',
     atividade_id: '',
     centro_custo_id: '',
     plano_conta_id: '',
+    nota_fiscal_id: '',
     status: '',
     dateRange: undefined,
   })
@@ -63,6 +71,10 @@ const Critica = () => {
     auxiliaryService
       .fetchPlanoContas()
       .then(setPlanoContas)
+      .catch(() => {})
+    auxiliaryService
+      .fetchNotasFiscais()
+      .then(setNotasFiscais)
       .catch(() => {})
   }, [])
 
@@ -137,6 +149,7 @@ const Critica = () => {
         atividades={atividades}
         centroCustos={centroCustos}
         planoContas={planoContas}
+        notasFiscais={notasFiscais}
       />
       {showLoading ? (
         <div className="flex justify-center py-10">
@@ -151,6 +164,7 @@ const Critica = () => {
           atividades={atividades}
           centroCustos={centroCustos}
           planoContas={planoContas}
+          notasFiscais={notasFiscais}
         />
       )}
       <TransactionForm
@@ -158,6 +172,10 @@ const Critica = () => {
         onOpenChange={setIsFormOpen}
         transactionToEdit={editingTransaction}
         onSuccess={() => fetchTransactions(filters)}
+        atividades={atividades}
+        centroCustos={centroCustos}
+        planoContas={planoContas}
+        notasFiscais={notasFiscais}
       />
       <PdfImportModal
         open={isPdfOpen}

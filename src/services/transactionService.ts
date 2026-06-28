@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
+import { format } from 'date-fns'
 import { Transacao } from '@/lib/types'
 import { CriticaFilterState } from '@/components/critica/CriticaFilters'
-import { format } from 'date-fns'
 
 export async function fetchTransactions(
   filters: CriticaFilterState,
@@ -9,25 +9,23 @@ export async function fetchTransactions(
   let query = supabase.from('critica').select('*')
 
   if (filters.historico) {
-    query = query.ilike('description', `%${filters.historico}%`)
+    query = query.ilike('historico', `%${filters.historico}%`)
   }
-
   if (filters.atividade_id) {
     query = query.eq('atividade_id', Number(filters.atividade_id))
   }
-
   if (filters.centro_custo_id) {
     query = query.eq('centro_custo_id', Number(filters.centro_custo_id))
   }
-
   if (filters.plano_conta_id) {
     query = query.eq('plano_conta_id', Number(filters.plano_conta_id))
   }
-
+  if (filters.nota_fiscal_id) {
+    query = query.eq('nota_fiscal_id', Number(filters.nota_fiscal_id))
+  }
   if (filters.status) {
     query = query.eq('status', filters.status)
   }
-
   if (filters.dateRange?.from) {
     query = query.gte('date', format(filters.dateRange.from, 'yyyy-MM-dd'))
   }

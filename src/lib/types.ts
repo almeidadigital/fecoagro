@@ -143,7 +143,7 @@ export interface PaymentMethodDistribution {
 export interface NotaFiscal {
   id: number
   user_id: string
-  numero_nota: string
+  numero_nota: number
   data_emissao: string
   emissor: string
   valor_total: number
