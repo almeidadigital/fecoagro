@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Landmark, FileUp, CheckCircle2, Clock, Link2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  Landmark,
+  FileUp,
+  CheckCircle2,
+  Clock,
+  Link2,
+  Search,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -31,6 +39,7 @@ export default function Extratos() {
     null,
   )
   const [reconcileOpen, setReconcileOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const loadBancos = useCallback(async () => {
     try {
@@ -64,6 +73,16 @@ export default function Extratos() {
   useEffect(() => {
     if (selectedBancoId) loadExtratos()
   }, [selectedBancoId, loadExtratos])
+
+  const filteredBancos = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return bancos
+    return bancos.filter((b) => {
+      const idStr = String(b.id)
+      const bancoName = b.banco.toLowerCase()
+      return idStr.includes(term) || bancoName.includes(term)
+    })
+  }, [bancos, searchTerm])
 
   const selectedBanco = bancos.find((b) => b.id === selectedBancoId)
   const reconciledCount = extratos.filter((e) => e.reconciled).length
@@ -103,8 +122,17 @@ export default function Extratos() {
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Contas Bancárias
           </h2>
-          <div className="flex flex-col gap-3">
-            {bancos.map((banco) => (
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por ID ou nome..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+          <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
+            {filteredBancos.map((banco) => (
               <button
                 key={banco.id}
                 onClick={() => setSelectedBancoId(banco.id)}
@@ -121,7 +149,7 @@ export default function Extratos() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900 truncate">
-                      {banco.banco}
+                      {banco.id} - {banco.banco}
                     </h3>
                     <p className="text-xs text-gray-400 font-mono">
                       Ag: {banco.agencia} | CC: {banco.conta_corrente}
@@ -141,6 +169,13 @@ export default function Extratos() {
                 </div>
               </button>
             ))}
+            {filteredBancos.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-gray-500 text-sm">
+                  Nenhuma conta encontrada com este filtro.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -149,7 +184,7 @@ export default function Extratos() {
             <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  {selectedBanco.banco}
+                  {selectedBanco.id} - {selectedBanco.banco}
                 </p>
                 <p className="text-xs text-gray-400">
                   Ag: {selectedBanco.agencia} | CC:{' '}
