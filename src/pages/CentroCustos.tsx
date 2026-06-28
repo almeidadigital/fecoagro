@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CentroCustosForm } from '@/components/forms/CentroCustosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import {
   ComboboxFilter,
   ComboboxFilterState,
@@ -93,6 +94,17 @@ const CentroCustosPage = () => {
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
+          <PdfExportButton
+            title="Centro de Custos"
+            columns={[
+              { header: 'ID', key: 'id' },
+              { header: 'Centro de Custos', key: 'centro_de_custos' },
+            ]}
+            data={filteredData.map((item) => ({
+              id: item.id,
+              centro_de_custos: item.centro_de_custos,
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>

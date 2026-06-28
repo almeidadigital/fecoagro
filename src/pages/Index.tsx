@@ -1,10 +1,18 @@
+import { useState, useMemo } from 'react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDashboard } from '@/hooks/use-dashboard'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
 import { FinancialEvolutionChart } from '@/components/dashboard/FinancialEvolutionChart'
 import { StatusChart } from '@/components/dashboard/StatusChart'
 import { DistributionChart } from '@/components/dashboard/DistributionChart'
-import { DebitCreditChart } from '@/components/dashboard/DebitCreditChart'
+import { CentroCustoPieChart } from '@/components/dashboard/CentroCustoPieChart'
 import { ExtratosSummary } from '@/components/dashboard/ExtratosSummary'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { KPIMetric } from '@/lib/types'
@@ -12,12 +20,44 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { FecoagroLogo } from '@/components/FecoagroLogo'
 import { formatCurrency } from '@/lib/format'
 
+const MONTHS = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+]
+
 const Index = () => {
+  const now = new Date()
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+
+  const dateRange = useMemo(
+    () => ({
+      from: new Date(selectedYear, selectedMonth - 1, 1),
+      to: new Date(selectedYear, selectedMonth, 0),
+    }),
+    [selectedMonth, selectedYear],
+  )
+
+  const years = [
+    now.getFullYear() - 1,
+    now.getFullYear(),
+    now.getFullYear() + 1,
+  ]
+
   const {
     kpis,
     recentTransactions,
     razaoEvolution,
-    debitCreditTotals,
     recentExtratos,
     centroCustoDistribution,
     atividadeDistribution,
@@ -26,30 +66,39 @@ const Index = () => {
     loading,
     summaryData,
     summaryLoading,
-  } = useDashboard()
+  } = useDashboard(dateRange)
 
   const kpiData: KPIMetric[] = kpis
     ? [
         {
-          label: 'Total Críticas',
-          value: String(kpis.totalCriticas),
-          subValue: formatCurrency(kpis.totalCriticasAmount),
+          label: 'Saldo Total',
+          value: kpis.bankBalance,
+          subValue: 'Consolidado',
           trend: 0,
-          trendLabel: 'Registros',
+          trendLabel: 'Atual',
           progress: 100,
-          color: 'blue',
+          color: 'green',
         },
         {
-          label: 'Pendentes',
-          value: String(kpis.pendingCriticas),
-          subValue: 'Aguardando processamento',
+          label: 'Críticas Pendentes',
+          value: String(kpis.unreconciledCriticas),
+          subValue: `${kpis.pendingCriticas} não processadas`,
           trend: 0,
           trendLabel: 'Status',
           progress:
             kpis.totalCriticas > 0
-              ? (kpis.pendingCriticas / kpis.totalCriticas) * 100
+              ? (kpis.unreconciledCriticas / kpis.totalCriticas) * 100
               : 0,
           color: 'yellow',
+        },
+        {
+          label: 'Movimentação Mensal',
+          value: kpis.monthlyMovement,
+          subValue: formatCurrency(kpis.totalCriticasAmount),
+          trend: 0,
+          trendLabel: 'Mês atual',
+          progress: 100,
+          color: 'blue',
         },
         {
           label: 'Saldo Razão',
@@ -59,15 +108,6 @@ const Index = () => {
           trendLabel: 'Atual',
           progress: 100,
           color: 'purple',
-        },
-        {
-          label: 'Saldo Bancário',
-          value: kpis.bankBalance,
-          subValue: 'Consolidado',
-          trend: 0,
-          trendLabel: 'Atual',
-          progress: 100,
-          color: 'green',
         },
       ]
     : []
@@ -94,11 +134,45 @@ const Index = () => {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
-      <div className="flex items-center justify-between">
-        <FecoagroLogo className="h-10" />
-        <div className="text-right hidden sm:block">
-          <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
-          <p className="text-sm text-gray-500">Visão geral financeira</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <FecoagroLogo className="h-10" />
+          <div className="hidden sm:block">
+            <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+            <p className="text-sm text-gray-500">Visão geral financeira</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(selectedMonth)}
+            onValueChange={(v) => setSelectedMonth(Number(v))}
+          >
+            <SelectTrigger className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((m, i) => (
+                <SelectItem key={i} value={String(i + 1)}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={String(selectedYear)}
+            onValueChange={(v) => setSelectedYear(Number(v))}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -117,7 +191,7 @@ const Index = () => {
           <FinancialEvolutionChart data={razaoEvolution} />
         </div>
         <div className="h-[400px] xl:h-full">
-          <StatusChart data={statusDistribution} />
+          <CentroCustoPieChart data={centroCustoDistribution} />
         </div>
       </div>
 
@@ -144,7 +218,7 @@ const Index = () => {
           />
         </div>
         <div className="h-full min-h-[400px]">
-          <DebitCreditChart data={debitCreditTotals} />
+          <StatusChart data={statusDistribution} />
         </div>
       </div>
 

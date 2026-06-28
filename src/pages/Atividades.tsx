@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { AtividadesForm } from '@/components/forms/AtividadesForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import {
   ComboboxFilter,
   ComboboxFilterState,
@@ -93,6 +94,17 @@ const AtividadesPage = () => {
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
+          <PdfExportButton
+            title="Atividades"
+            columns={[
+              { header: 'ID', key: 'id' },
+              { header: 'Atividade', key: 'atividade' },
+            ]}
+            data={filteredData.map((item) => ({
+              id: item.id,
+              atividade: item.atividade,
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>

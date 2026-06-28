@@ -11,6 +11,7 @@ import {
 } from '@/components/critica/CriticaFilters'
 import { TransactionsTable } from '@/components/transactions/TransactionsTable'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import useTransactionStore from '@/stores/useTransactionStore'
 import {
   Transacao,
@@ -177,6 +178,29 @@ const Critica = () => {
             <FileUp className="w-4 h-4 mr-2" />
             Importar PDF
           </Button>
+          <PdfExportButton
+            title="Críticas Contábeis"
+            columns={[
+              { header: 'Data', key: 'date' },
+              { header: 'Histórico', key: 'historico' },
+              { header: 'Valor', key: 'amount' },
+              { header: 'Status', key: 'status' },
+              { header: 'Atividade', key: 'atividade' },
+              { header: 'Centro de Custos', key: 'centro_custo' },
+              { header: 'Plano de Contas', key: 'plano_conta' },
+              { header: 'Reconciliado', key: 'reconciled' },
+            ]}
+            data={transactions.map((t) => ({
+              date: formatDateBR(t.date),
+              historico: t.historico || '',
+              amount: formatCurrencyNumber(t.amount),
+              status: t.status || '',
+              atividade: formatAtividade(t.atividade_id, atividades),
+              centro_custo: formatCentroCusto(t.centro_custo_id, centroCustos),
+              plano_conta: formatPlanoConta(t.plano_conta_id, planoContas),
+              reconciled: t.reconciled ? 'Sim' : 'Não',
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Exportar

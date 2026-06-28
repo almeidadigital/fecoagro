@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { PlanoContasForm } from '@/components/forms/PlanoContasForm'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import {
   ComboboxFilter,
   ComboboxFilterState,
@@ -95,6 +96,21 @@ const PlanoContasPage = () => {
           <p className="text-gray-500">Gerencie seu plano de contas.</p>
         </div>
         <div className="flex gap-2">
+          <PdfExportButton
+            title="Plano de Contas"
+            columns={[
+              { header: 'ID', key: 'id' },
+              { header: 'Classificação', key: 'classificacao' },
+              { header: 'Descrição', key: 'descricao' },
+              { header: 'Tipo', key: 'tipo' },
+            ]}
+            data={filteredData.map((item) => ({
+              id: item.id,
+              classificacao: item.classificacao ?? '',
+              descricao: item.descricao ?? '',
+              tipo: item.tipo ?? '',
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>

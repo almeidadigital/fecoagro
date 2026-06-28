@@ -23,6 +23,7 @@ import {
 import { BancosForm } from '@/components/forms/BancosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { SearchableFilter } from '@/components/SearchableFilter'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import { Banco } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { exportToCsv, formatCurrencyNumber } from '@/lib/export'
@@ -106,6 +107,23 @@ const BancosPage = () => {
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
+          <PdfExportButton
+            title="Bancos"
+            columns={[
+              { header: 'ID', key: 'id' },
+              { header: 'Banco', key: 'banco' },
+              { header: 'Agência', key: 'agencia' },
+              { header: 'Conta Corrente', key: 'conta_corrente' },
+              { header: 'Saldo Atual', key: 'saldo_atual' },
+            ]}
+            data={filteredData.map((item) => ({
+              id: item.id,
+              banco: item.banco,
+              agencia: item.agencia,
+              conta_corrente: item.conta_corrente,
+              saldo_atual: formatCurrencyNumber(item.saldo_atual),
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>

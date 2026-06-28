@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { ReconciliationSheet } from '@/components/ReconciliationSheet'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import {
   exportToCsv,
   buildExportFilename,
@@ -153,6 +154,23 @@ export default function Extratos() {
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
+          <PdfExportButton
+            title="Extratos Bancários"
+            columns={[
+              { header: 'Data', key: 'data' },
+              { header: 'Descrição', key: 'descricao' },
+              { header: 'Valor', key: 'valor' },
+              { header: 'Tipo', key: 'tipo' },
+              { header: 'Status', key: 'status' },
+            ]}
+            data={extratos.map((e) => ({
+              data: formatDateBR(e.data),
+              descricao: e.descricao,
+              valor: formatCurrencyNumber(e.valor),
+              tipo: e.tipo === 'credit' ? 'Crédito' : 'Débito',
+              status: e.reconciled ? 'Reconciliado' : 'Pendente',
+            }))}
+          />
         </div>
       </div>
 

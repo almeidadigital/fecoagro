@@ -7,6 +7,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts'
 import { format } from 'date-fns'
@@ -30,14 +31,15 @@ export function FinancialEvolutionChart({
   return (
     <Card className="rounded-3xl border-none shadow-sm h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="text-lg font-bold">
-          Evolução Financeira (Razão)
-        </CardTitle>
+        <CardTitle className="text-lg font-bold">Entradas vs Saídas</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 min-h-[250px] relative">
         {hasData ? (
           <ChartContainer
-            config={{ saldo: { label: 'Saldo', color: 'hsl(var(--primary))' } }}
+            config={{
+              credito: { label: 'Entradas', color: '#10B981' },
+              debito: { label: 'Saídas', color: '#EF4444' },
+            }}
             className="w-full h-full"
           >
             <LineChart
@@ -72,10 +74,25 @@ export function FinancialEvolutionChart({
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
               />
+              <Legend
+                verticalAlign="top"
+                height={36}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px' }}
+              />
               <Line
                 type="monotone"
-                dataKey="saldo"
-                stroke="hsl(var(--primary))"
+                dataKey="credito"
+                name="Entradas"
+                stroke="#10B981"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="debito"
+                name="Saídas"
+                stroke="#EF4444"
                 strokeWidth={2}
                 dot={false}
               />

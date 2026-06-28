@@ -16,6 +16,7 @@ import { summaryService, SummaryData } from '@/services/summaryService'
 import { toast } from 'sonner'
 import useTransactionStore from '@/stores/useTransactionStore'
 import { useAuth } from '@/hooks/use-auth'
+import { format } from 'date-fns'
 
 const COLORS = [
   'bg-blue-500',
@@ -72,17 +73,19 @@ function processStatusDistribution(
   }))
 }
 
-export const useDashboard = () => {
+interface DateRange {
+  from: Date
+  to: Date
+}
+
+export const useDashboard = (dateRange?: DateRange) => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null)
   const [recentTransactions, setRecentTransactions] = useState<Transacao[]>([])
   const [razaoEvolution, setRazaoEvolution] = useState<RazaoEvolutionPoint[]>(
     [],
   )
   const [debitCreditTotals, setDebitCreditTotals] = useState<DebitCreditTotals>(
-    {
-      debito: 0,
-      credito: 0,
-    },
+    { debito: 0, credito: 0 },
   )
   const [recentExtratos, setRecentExtratos] = useState<
     {
@@ -131,6 +134,8 @@ export const useDashboard = () => {
 
     try {
       setLoading(true)
+      const dr = dateRange
+      const kpiDate = dr ? format(dr.to, 'yyyy-MM-dd') : undefined
       const [
         kpiData,
         recentData,
@@ -143,12 +148,12 @@ export const useDashboard = () => {
         atividades,
         planoContas,
       ] = await Promise.all([
-        dashboardService.getKPIs(),
-        dashboardService.getRecentTransactions(6),
-        dashboardService.getCriticaForDistributions(),
-        dashboardService.getRazaoEvolution(),
-        dashboardService.getDebitCreditTotals(),
-        dashboardService.getRecentExtratos(6),
+        dashboardService.getKPIs(kpiDate),
+        dashboardService.getRecentTransactions(6, dr?.from, dr?.to),
+        dashboardService.getCriticaForDistributions(500, dr?.from, dr?.to),
+        dashboardService.getRazaoEvolution(dr?.from, dr?.to),
+        dashboardService.getDebitCreditTotals(dr?.from, dr?.to),
+        dashboardService.getRecentExtratos(6, dr?.from, dr?.to),
         summaryService.getSummary(),
         auxiliaryService.fetchCentroCustos(),
         auxiliaryService.fetchAtividades(),
@@ -192,7 +197,7 @@ export const useDashboard = () => {
       setLoading(false)
       setSummaryLoading(false)
     }
-  }, [role])
+  }, [role, dateRange?.from?.getTime(), dateRange?.to?.getTime()])
 
   useEffect(() => {
     fetchData()

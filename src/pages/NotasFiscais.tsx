@@ -32,6 +32,7 @@ import {
 import { NotasFiscaisForm } from '@/components/forms/NotasFiscaisForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { NotaFiscalViewDialog } from '@/components/NotaFiscalViewDialog'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import { NotaFiscal } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import {
@@ -150,6 +151,23 @@ const NotasFiscais = () => {
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
+          <PdfExportButton
+            title="Notas Fiscais"
+            columns={[
+              { header: 'Número', key: 'numero_nota' },
+              { header: 'Emissor', key: 'emissor' },
+              { header: 'Data Emissão', key: 'data_emissao' },
+              { header: 'Valor Total', key: 'valor_total' },
+              { header: 'Status', key: 'status' },
+            ]}
+            data={data.map((item) => ({
+              numero_nota: item.numero_nota,
+              emissor: item.emissor,
+              data_emissao: formatDateBR(item.data_emissao),
+              valor_total: formatCurrencyNumber(item.valor_total),
+              status: item.status,
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>

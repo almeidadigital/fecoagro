@@ -42,6 +42,7 @@ import { RazaoForm } from '@/components/forms/RazaoForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { StatementViewDialog } from '@/components/StatementViewDialog'
 import { SearchableFilter } from '@/components/SearchableFilter'
+import { PdfExportButton } from '@/components/PdfExportButton'
 import { Razao, PlanoConta } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { auxiliaryService } from '@/services/auxiliaryService'
@@ -191,6 +192,25 @@ const RazaoPage = () => {
           <Button variant="outline" onClick={() => setPdfOpen(true)}>
             <FileUp className="w-4 h-4 mr-2" /> Importar PDF
           </Button>
+          <PdfExportButton
+            title="Razão Contábil"
+            columns={[
+              { header: 'Data', key: 'data' },
+              { header: 'Conta', key: 'conta' },
+              { header: 'Descrição', key: 'descricao' },
+              { header: 'Débito', key: 'debito' },
+              { header: 'Crédito', key: 'credito' },
+              { header: 'Saldo', key: 'saldo' },
+            ]}
+            data={data.map((item) => ({
+              data: formatDateBR(item.data),
+              conta: getContaLabel(item.plano_conta_id),
+              descricao: item.descricao,
+              debito: formatCurrencyNumber(item.debito),
+              credito: formatCurrencyNumber(item.credito),
+              saldo: formatCurrencyNumber(item.saldo),
+            }))}
+          />
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
