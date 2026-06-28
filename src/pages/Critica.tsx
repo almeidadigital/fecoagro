@@ -3,7 +3,6 @@ import { Plus, FileUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteRecord } from '@/services/crudService'
 import { TransactionViewDialog } from '@/components/transactions/TransactionViewDialog'
-
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import {
@@ -14,21 +13,32 @@ import {
 import { TransactionsTable } from '@/components/transactions/TransactionsTable'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import useTransactionStore from '@/stores/useTransactionStore'
-import { Transacao } from '@/lib/types'
+import { Transacao, Atividade, CentroCusto, PlanoConta } from '@/lib/types'
 import { useAuth } from '@/hooks/use-auth'
+import { auxiliaryService } from '@/services/auxiliaryService'
 import AccessDenied from '@/pages/AccessDenied'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const filterColumns: ComboboxFilterColumn[] = [
-  { value: 'description', label: 'Descrição' },
+  { value: 'historico', label: 'Histórico' },
   {
-    value: 'type',
-    label: 'Tipo',
+    value: 'status',
+    label: 'Status',
     options: [
-      { value: 'Receita', label: 'Receita' },
-      { value: 'Despesa', label: 'Despesa' },
+      { value: 'pendente', label: 'Pendente' },
+      { value: 'concluido', label: 'Concluído' },
+      { value: 'cancelado', label: 'Cancelado' },
     ],
   },
-  { value: 'notes', label: 'Observações' },
 ]
 
 const Critica = () => {
@@ -41,12 +51,31 @@ const Critica = () => {
     useState<Transacao | null>(null)
   const [viewingTransaction, setViewingTransaction] =
     useState<Transacao | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Transacao | null>(null)
+  const [atividades, setAtividades] = useState<Atividade[]>([])
+  const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
+  const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
 
   const [filters, setFilters] = useState<ComboboxFilterState>({
     column: '',
     value: '',
     dateRange: undefined,
   })
+
+  useEffect(() => {
+    auxiliaryService
+      .fetchAtividades()
+      .then(setAtividades)
+      .catch(() => {})
+    auxiliaryService
+      .fetchCentroCustos()
+      .then(setCentroCustos)
+      .catch(() => {})
+    auxiliaryService
+      .fetchPlanoContas()
+      .then(setPlanoContas)
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -69,13 +98,16 @@ const Critica = () => {
     setViewingTransaction(transaction)
   }
 
-  const handleDelete = async (transaction: Transacao) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteRecord('critica', transaction.id)
+      await deleteRecord('critica', deleteTarget.id)
       toast.success('Crítica excluída com sucesso')
       fetchTransactions(filters)
     } catch {
       toast.error('Erro ao excluir crítica')
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -124,7 +156,10 @@ const Critica = () => {
           data={transactions}
           onEdit={handleEdit}
           onView={handleView}
-          onDelete={handleDelete}
+          onDelete={(t) => setDeleteTarget(t)}
+          atividades={atividades}
+          centroCustos={centroCustos}
+          planoContas={planoContas}
         />
       )}
       <TransactionForm
@@ -143,7 +178,36 @@ const Critica = () => {
         transaction={viewingTransaction}
         open={!!viewingTransaction}
         onOpenChange={(open) => !open && setViewingTransaction(null)}
-      />{' '}
+        atividades={atividades}
+        centroCustos={centroCustos}
+        planoContas={planoContas}
+      />
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta crítica? Esta ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                confirmDelete()
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

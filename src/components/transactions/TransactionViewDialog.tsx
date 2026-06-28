@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -7,12 +6,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 import { Transacao, Atividade, CentroCusto, PlanoConta } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 interface TransactionViewDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: Transacao | null
+  transaction: Transacao | null
   atividades: Atividade[]
   centroCustos: CentroCusto[]
   planoContas: PlanoConta[]
@@ -22,24 +23,33 @@ const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(v)
+  }).format(v || 0)
+
+const safeFormatDate = (value: string | null | undefined): string => {
+  if (!value) return 'N/A'
+  const datePart = value.split('T')[0]
+  const parts = datePart.split('-')
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
+  return 'N/A'
+}
 
 export function TransactionViewDialog({
   open,
   onOpenChange,
-  item,
+  transaction,
   atividades,
   centroCustos,
   planoContas,
 }: TransactionViewDialogProps) {
-  if (!item) return null
+  if (!transaction) return null
 
   const getLabel = (
-    id: number | null,
-    list: { id: number }[],
+    id: number | null | undefined,
+    list: { id: number }[] | undefined,
     field: string,
   ) => {
     if (!id) return '-'
+    if (!list || !Array.isArray(list)) return String(id)
     const found = list.find((x) => x.id === id) as any
     return found ? `${found.id} - ${found[field] || 'Sem descrição'}` : '-'
   }
@@ -56,14 +66,16 @@ export function TransactionViewDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-500">ID</label>
-                <p className="text-sm font-mono text-gray-900">{item.id}</p>
+                <p className="text-sm font-mono text-gray-900">
+                  {transaction.id}
+                </p>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500">
                   Data
                 </label>
                 <p className="text-sm text-gray-900">
-                  {format(new Date(item.date), 'dd/MM/yyyy')}
+                  {safeFormatDate(transaction.date)}
                 </p>
               </div>
             </div>
@@ -72,7 +84,7 @@ export function TransactionViewDialog({
                 Histórico
               </label>
               <p className="text-sm text-gray-900">
-                {item.historico || item.description}
+                {transaction.historico || transaction.description || '-'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -81,7 +93,7 @@ export function TransactionViewDialog({
                   Valor
                 </label>
                 <p className="text-sm font-bold text-gray-900">
-                  {formatCurrency(item.amount)}
+                  {formatCurrency(transaction.amount)}
                 </p>
               </div>
               <div>
@@ -89,7 +101,7 @@ export function TransactionViewDialog({
                   Lote
                 </label>
                 <p className="text-sm font-mono text-gray-900">
-                  {item.lote || '-'}
+                  {transaction.lote || '-'}
                 </p>
               </div>
             </div>
@@ -99,7 +111,7 @@ export function TransactionViewDialog({
                   Atividade
                 </label>
                 <p className="text-sm text-gray-900">
-                  {getLabel(item.atividade_id, atividades, 'atividade')}
+                  {getLabel(transaction.atividade_id, atividades, 'atividade')}
                 </p>
               </div>
               <div>
@@ -108,7 +120,7 @@ export function TransactionViewDialog({
                 </label>
                 <p className="text-sm text-gray-900">
                   {getLabel(
-                    item.centro_custo_id,
+                    transaction.centro_custo_id,
                     centroCustos,
                     'centro_de_custos',
                   )}
@@ -118,16 +130,43 @@ export function TransactionViewDialog({
             <div>
               <label className="text-xs font-medium text-gray-500">Conta</label>
               <p className="text-sm text-gray-900">
-                {getLabel(item.plano_conta_id, planoContas, 'descricao')}
+                {getLabel(transaction.plano_conta_id, planoContas, 'descricao')}
               </p>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500">
                 Status
               </label>
-              <p className="text-sm text-gray-900">
-                {item.status || (item.reconciled ? 'Reconciliado' : 'Pendente')}
-              </p>
+              <div className="mt-1">
+                {transaction.status ? (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      transaction.status === 'concluido'
+                        ? 'bg-green-50 text-green-700'
+                        : transaction.status === 'cancelado'
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-amber-50 text-amber-700',
+                    )}
+                  >
+                    {transaction.status}
+                  </Badge>
+                ) : transaction.reconciled ? (
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-50 text-green-700"
+                  >
+                    Reconciliado
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="bg-amber-50 text-amber-700"
+                  >
+                    Pendente
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>

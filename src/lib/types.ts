@@ -24,9 +24,11 @@ export interface Transacao {
   user_id: string
   date: string
   description: string
-  category: string
+  historico: string | null
+  status: string | null
+  category: string | null
   amount: number
-  payment_method: string
+  payment_method: string | null
   lote: number | null
   centro_custo_id: number | null
   atividade_id: number | null

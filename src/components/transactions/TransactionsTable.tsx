@@ -31,6 +31,11 @@ const formatCurrency = (v: number) =>
 
 const safeFormatDate = (value: string | null | undefined): string => {
   if (!value) return 'N/A'
+  const datePart = value.split('T')[0]
+  const parts = datePart.split('-')
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
+  }
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return 'N/A'
   try {
@@ -49,23 +54,23 @@ export function TransactionsTable({
   centroCustos,
   planoContas,
 }: TransactionsTableProps) {
-  const getAtividadeLabel = (id: number | null) => {
+  const getAtividadeLabel = (id: number | null | undefined) => {
     if (!id) return '-'
-    if (!Array.isArray(atividades)) return String(id)
+    if (!atividades || !Array.isArray(atividades)) return String(id)
     const a = atividades.find((x) => x.id === id)
     return a ? `${a.id} - ${a.atividade}` : String(id)
   }
 
-  const getCentroCustoLabel = (id: number | null) => {
+  const getCentroCustoLabel = (id: number | null | undefined) => {
     if (!id) return '-'
-    if (!Array.isArray(centroCustos)) return String(id)
+    if (!centroCustos || !Array.isArray(centroCustos)) return String(id)
     const c = centroCustos.find((x) => x.id === id)
     return c ? `${c.id} - ${c.centro_de_custos}` : String(id)
   }
 
-  const getPlanoContaLabel = (id: number | null) => {
+  const getPlanoContaLabel = (id: number | null | undefined) => {
     if (!id) return '-'
-    if (!Array.isArray(planoContas)) return String(id)
+    if (!planoContas || !Array.isArray(planoContas)) return String(id)
     const p = planoContas.find((x) => x.id === id)
     return p ? `${p.id} - ${p.descricao || 'Sem descrição'}` : String(id)
   }
