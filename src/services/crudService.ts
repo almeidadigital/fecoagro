@@ -72,16 +72,40 @@ export async function fetchWithFilters<T>(
   table: string,
   options: {
     searchColumn?: string
+    searchColumns?: string[]
     searchValue?: string
     dateColumn?: string
     dateFrom?: Date
     dateTo?: Date
     exactMatch?: boolean
+    valueColumn?: string
+    valueMin?: number
+    valueMax?: number
+    eqColumn?: string
+    eqValue?: string
   },
 ): Promise<T[]> {
   let query = supabase.from(table).select('*')
 
-  if (options.searchValue && options.searchColumn) {
+  if (options.eqValue && options.eqColumn) {
+    query = query.eq(options.eqColumn, options.eqValue)
+  }
+
+  if (
+    options.searchValue &&
+    options.searchColumns &&
+    options.searchColumns.length > 0
+  ) {
+    const conditions = options.searchColumns
+      .map((col) => {
+        if (textColumns.includes(col)) {
+          return `${col}.ilike.%${options.searchValue}%`
+        }
+        return `${col}.eq.${options.searchValue}`
+      })
+      .join(',')
+    query = query.or(conditions)
+  } else if (options.searchValue && options.searchColumn) {
     if (options.exactMatch || !textColumns.includes(options.searchColumn)) {
       query = query.eq(options.searchColumn, options.searchValue)
     } else {
@@ -97,6 +121,13 @@ export async function fetchWithFilters<T>(
   }
   if (options.dateTo && options.dateColumn) {
     query = query.lte(options.dateColumn, format(options.dateTo, 'yyyy-MM-dd'))
+  }
+
+  if (options.valueMin !== undefined && options.valueColumn) {
+    query = query.gte(options.valueColumn, options.valueMin)
+  }
+  if (options.valueMax !== undefined && options.valueColumn) {
+    query = query.lte(options.valueColumn, options.valueMax)
   }
 
   query = query.order('created_at', { ascending: false })

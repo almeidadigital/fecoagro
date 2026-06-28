@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CentroCustosForm } from '@/components/forms/CentroCustosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { SearchableFilter } from '@/components/SearchableFilter'
 import { CentroCusto } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
@@ -32,6 +33,12 @@ const CentroCustosPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<CentroCusto | null>(null)
+  const [centroFilter, setCentroFilter] = useState('all')
+
+  const filteredData =
+    centroFilter === 'all'
+      ? data
+      : data.filter((c) => c.centro_de_custos === centroFilter)
 
   const loadData = useCallback(async () => {
     try {
@@ -48,6 +55,10 @@ const CentroCustosPage = () => {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const centroOptions = [...new Set(data.map((c) => c.centro_de_custos))].map(
+    (c) => ({ value: c, label: c }),
+  )
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -83,79 +94,88 @@ const CentroCustosPage = () => {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Centro de Custos</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs text-gray-400">
-                    {String(item.id).substring(0, 8)}
-                  </TableCell>
-                  <TableCell className="font-semibold text-gray-900">
-                    {item.centro_de_custos}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => {
-                          setEditItem(item)
-                          setFormOpen(true)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação excluirá permanentemente o centro de
-                              custo.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={async () => {
-                                await deleteRecord('centro_custos', item.id)
-                                setData((prev) =>
-                                  prev.filter((i) => i.id !== item.id),
-                                )
-                                toast.success('Centro de custo excluído')
-                              }}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+        <>
+          <SearchableFilter
+            options={centroOptions}
+            value={centroFilter}
+            onValueChange={setCentroFilter}
+            placeholder="Filtrar por centro de custo"
+          />
+
+          <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead>Centro de Custos</TableHead>
+                  <TableHead className="w-[100px] text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs text-gray-400">
+                      #{item.id}
+                    </TableCell>
+                    <TableCell className="font-semibold text-gray-900">
+                      {item.centro_de_custos}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setEditItem(item)
+                            setFormOpen(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação excluirá permanentemente o centro de
+                                custo.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={async () => {
+                                  await deleteRecord('centro_custos', item.id)
+                                  setData((prev) =>
+                                    prev.filter((i) => i.id !== item.id),
+                                  )
+                                  toast.success('Centro de custo excluído')
+                                }}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <CentroCustosForm

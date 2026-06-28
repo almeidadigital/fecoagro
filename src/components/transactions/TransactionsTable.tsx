@@ -33,21 +33,21 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
   const { centroCustos, atividades, planoContas, deleteTransaction } =
     useTransactionStore()
 
-  const getCentroCustoName = (id?: string) => {
+  const getCentroCustoName = (id?: string | number) => {
     if (!id) return '-'
-    const cc = centroCustos.find((c) => c.id === id)
+    const cc = centroCustos.find((c) => String(c.id) === String(id))
     return cc ? cc.centro_de_custos : '-'
   }
 
-  const getAtividadeName = (id?: string) => {
+  const getAtividadeName = (id?: string | number) => {
     if (!id) return '-'
-    const atv = atividades.find((a) => a.id === id)
+    const atv = atividades.find((a) => String(a.id) === String(id))
     return atv ? atv.atividade : '-'
   }
 
-  const getPlanoContaName = (id?: string) => {
+  const getPlanoContaName = (id?: string | number) => {
     if (!id) return '-'
-    const pc = planoContas.find((p) => p.id === id)
+    const pc = planoContas.find((p) => String(p.id) === String(id))
     return pc ? pc.descricao : '-'
   }
 
@@ -79,7 +79,6 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
             <TableHead>Atividade</TableHead>
             <TableHead>Descrição da Conta</TableHead>
             <TableHead className="text-right">Valor</TableHead>
-            <TableHead>Forma de Pagamento</TableHead>
             <TableHead className="w-[100px] text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -108,9 +107,6 @@ export function TransactionsTable({ data, onEdit }: TransactionsTableProps) {
               </TableCell>
               <TableCell className="text-right font-bold text-gray-900">
                 {formatCurrency(transaction.valor)}
-              </TableCell>
-              <TableCell className="text-gray-500 text-sm">
-                {transaction.forma_pagamento_id}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">

@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, FileUp, Edit, Trash2 } from 'lucide-react'
+import {
+  Plus,
+  FileUp,
+  Edit,
+  Trash2,
+  Eye,
+  Calendar as CalendarIcon,
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -20,20 +31,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { RazaoForm } from '@/components/forms/RazaoForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
-import {
-  GenericTableFilters,
-  GenericFilterState,
-} from '@/components/GenericTableFilters'
+import { StatementViewDialog } from '@/components/StatementViewDialog'
+import { SearchableFilter } from '@/components/SearchableFilter'
 import { Razao } from '@/lib/types'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+
+interface RazaoFilters {
+  dateRange: DateRange | undefined
+  conta: string
+  valorMin: string
+  valorMax: string
+}
 
 const formatCurrency = (v: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    v,
-  )
+  new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(v)
 
 const RazaoPage = () => {
   const [data, setData] = useState<Razao[]>([])
@@ -41,23 +65,40 @@ const RazaoPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<Razao | null>(null)
-  const [filters, setFilters] = useState<GenericFilterState>({
-    search: '',
+  const [viewItem, setViewItem] = useState<Razao | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [filters, setFilters] = useState<RazaoFilters>({
     dateRange: undefined,
-    status: 'all',
+    conta: 'all',
+    valorMin: '',
+    valorMax: '',
   })
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const result = await fetchWithFilters<Razao>('razao', {
-        searchColumns: ['conta', 'descricao'],
-        searchValue: filters.search,
         dateColumn: 'data',
         dateFrom: filters.dateRange?.from,
         dateTo: filters.dateRange?.to,
+        eqColumn: filters.conta !== 'all' ? 'conta' : undefined,
+        eqValue: filters.conta !== 'all' ? filters.conta : undefined,
       })
-      setData(result)
+
+      let filtered = result
+      const minVal = parseFloat(filters.valorMin)
+      const maxVal = parseFloat(filters.valorMax)
+      if (!isNaN(minVal)) {
+        filtered = filtered.filter(
+          (r) => r.debito >= minVal || r.credito >= minVal,
+        )
+      }
+      if (!isNaN(maxVal)) {
+        filtered = filtered.filter(
+          (r) => r.debito <= maxVal || r.credito <= maxVal,
+        )
+      }
+      setData(filtered)
     } catch {
       toast.error('Erro ao carregar lançamentos')
     } finally {
@@ -78,6 +119,15 @@ const RazaoPage = () => {
     setEditItem(item)
     setFormOpen(true)
   }
+  const handleView = (item: Razao) => {
+    setViewItem(item)
+    setViewOpen(true)
+  }
+
+  const uniqueContas = [...new Set(data.map((d) => d.conta))].map((c) => ({
+    value: c,
+    label: c,
+  }))
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -98,12 +148,76 @@ const RazaoPage = () => {
         </div>
       </div>
 
-      <GenericTableFilters
-        filters={filters}
-        setFilters={setFilters}
-        searchPlaceholder="Buscar por conta ou descrição..."
-        showStatus={false}
-      />
+      <div className="flex flex-col md:flex-row gap-4 flex-wrap">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full md:w-[260px] justify-start text-left font-normal bg-white',
+                !filters.dateRange && 'text-muted-foreground',
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {filters.dateRange?.from ? (
+                filters.dateRange.to ? (
+                  <>
+                    {format(filters.dateRange.from, 'dd/MM/yyyy')} -{' '}
+                    {format(filters.dateRange.to, 'dd/MM/yyyy')}
+                  </>
+                ) : (
+                  format(filters.dateRange.from, 'dd/MM/yyyy')
+                )
+              ) : (
+                <span>Filtrar por data</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={filters.dateRange?.from}
+              selected={filters.dateRange}
+              onSelect={(range) =>
+                setFilters((prev) => ({ ...prev, dateRange: range }))
+              }
+              numberOfMonths={2}
+              locale={ptBR}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <SearchableFilter
+          options={uniqueContas}
+          value={filters.conta}
+          onValueChange={(val) =>
+            setFilters((prev) => ({ ...prev, conta: val }))
+          }
+          placeholder="Filtrar por conta"
+        />
+
+        <div className="flex gap-2 items-center">
+          <Input
+            type="number"
+            placeholder="Valor mín."
+            value={filters.valorMin}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, valorMin: e.target.value }))
+            }
+            className="w-full md:w-[120px] bg-white"
+          />
+          <Input
+            type="number"
+            placeholder="Valor máx."
+            value={filters.valorMax}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, valorMax: e.target.value }))
+            }
+            className="w-full md:w-[120px] bg-white"
+          />
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-10">
@@ -121,18 +235,22 @@ const RazaoPage = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/50">
+                <TableHead className="w-[100px]">ID</TableHead>
                 <TableHead className="w-[120px]">Data</TableHead>
                 <TableHead>Conta</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead className="text-right">Débito</TableHead>
                 <TableHead className="text-right">Crédito</TableHead>
                 <TableHead className="text-right">Saldo</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
+                <TableHead className="w-[140px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((item) => (
                 <TableRow key={item.id}>
+                  <TableCell className="font-mono text-xs text-gray-400">
+                    #{item.id}
+                  </TableCell>
                   <TableCell className="text-gray-600">
                     {new Date(item.data).toLocaleDateString('pt-BR')}
                   </TableCell>
@@ -152,7 +270,16 @@ const RazaoPage = () => {
                     {formatCurrency(item.saldo)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:bg-gray-100"
+                        onClick={() => handleView(item)}
+                        title="Visualização de Extrato"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -215,6 +342,11 @@ const RazaoPage = () => {
         onOpenChange={setPdfOpen}
         entityType="razao"
         onSuccess={loadData}
+      />
+      <StatementViewDialog
+        open={viewOpen}
+        onOpenChange={setViewOpen}
+        item={viewItem}
       />
     </div>
   )

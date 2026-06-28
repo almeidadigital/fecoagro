@@ -24,9 +24,9 @@ export interface Transacao {
   data: Date
   descricao: string
   valor: number
-  categoria_id: string
+  categoria_id?: string
   tipo_id?: TipoTransacao
-  forma_pagamento_id: FormaPagamento
+  forma_pagamento_id?: FormaPagamento
   observacoes?: string
   centro_custo_id?: number
   atividade_id?: number

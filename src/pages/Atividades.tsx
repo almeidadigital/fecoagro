@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { AtividadesForm } from '@/components/forms/AtividadesForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { SearchableFilter } from '@/components/SearchableFilter'
 import { Atividade } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
@@ -32,6 +33,12 @@ const AtividadesPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<Atividade | null>(null)
+  const [atividadeFilter, setAtividadeFilter] = useState('all')
+
+  const filteredData =
+    atividadeFilter === 'all'
+      ? data
+      : data.filter((a) => a.atividade === atividadeFilter)
 
   const loadData = useCallback(async () => {
     try {
@@ -48,6 +55,10 @@ const AtividadesPage = () => {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const atividadeOptions = [...new Set(data.map((a) => a.atividade))].map(
+    (a) => ({ value: a, label: a }),
+  )
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -81,78 +92,87 @@ const AtividadesPage = () => {
           <p className="text-gray-500 mb-2">Nenhuma atividade encontrada.</p>
         </div>
       ) : (
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Atividade</TableHead>
-                <TableHead className="w-[100px] text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs text-gray-400">
-                    {String(item.id).substring(0, 8)}
-                  </TableCell>
-                  <TableCell className="font-semibold text-gray-900">
-                    {item.atividade}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => {
-                          setEditItem(item)
-                          setFormOpen(true)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação excluirá permanentemente a atividade.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={async () => {
-                                await deleteRecord('atividades', item.id)
-                                setData((prev) =>
-                                  prev.filter((i) => i.id !== item.id),
-                                )
-                                toast.success('Atividade excluída')
-                              }}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+        <>
+          <SearchableFilter
+            options={atividadeOptions}
+            value={atividadeFilter}
+            onValueChange={setAtividadeFilter}
+            placeholder="Filtrar por atividade"
+          />
+
+          <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50">
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead>Atividade</TableHead>
+                  <TableHead className="w-[100px] text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs text-gray-400">
+                      #{item.id}
+                    </TableCell>
+                    <TableCell className="font-semibold text-gray-900">
+                      {item.atividade}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setEditItem(item)
+                            setFormOpen(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação excluirá permanentemente a atividade.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={async () => {
+                                  await deleteRecord('atividades', item.id)
+                                  setData((prev) =>
+                                    prev.filter((i) => i.id !== item.id),
+                                  )
+                                  toast.success('Atividade excluída')
+                                }}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <AtividadesForm

@@ -22,16 +22,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { PlanoContasForm } from '@/components/forms/PlanoContasForm'
+import { SearchableFilter } from '@/components/SearchableFilter'
 import { PlanoConta } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 const PlanoContasPage = () => {
   const [data, setData] = useState<PlanoConta[]>([])
@@ -39,9 +33,13 @@ const PlanoContasPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [editItem, setEditItem] = useState<PlanoConta | null>(null)
   const [tipoFilter, setTipoFilter] = useState('all')
+  const [classFilter, setClassFilter] = useState('all')
 
-  const filteredData =
-    tipoFilter === 'all' ? data : data.filter((p) => p.tipo === tipoFilter)
+  const filteredData = data.filter((p) => {
+    const tipoMatch = tipoFilter === 'all' || p.tipo === tipoFilter
+    const classMatch = classFilter === 'all' || p.classificacao === classFilter
+    return tipoMatch && classMatch
+  })
 
   const loadData = useCallback(async () => {
     try {
@@ -58,6 +56,15 @@ const PlanoContasPage = () => {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const tipoOptions = [
+    { value: 'analitica', label: 'Analítica' },
+    { value: 'sintetica', label: 'Sintética' },
+  ]
+
+  const classOptions = [
+    ...new Set(data.map((p) => p.classificacao).filter(Boolean)),
+  ].map((c) => ({ value: c as string, label: c as string }))
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -87,16 +94,22 @@ const PlanoContasPage = () => {
         </div>
       ) : (
         <>
-          <Select value={tipoFilter} onValueChange={setTipoFilter}>
-            <SelectTrigger className="w-[180px] bg-white">
-              <SelectValue placeholder="Filtrar por tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Tipos</SelectItem>
-              <SelectItem value="analitica">Analítica</SelectItem>
-              <SelectItem value="sintetica">Sintética</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col md:flex-row gap-4">
+            <SearchableFilter
+              options={tipoOptions}
+              value={tipoFilter}
+              onValueChange={setTipoFilter}
+              placeholder="Filtrar por tipo"
+            />
+            {classOptions.length > 0 && (
+              <SearchableFilter
+                options={classOptions}
+                value={classFilter}
+                onValueChange={setClassFilter}
+                placeholder="Filtrar por classificação"
+              />
+            )}
+          </div>
 
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             <Table>
@@ -113,7 +126,7 @@ const PlanoContasPage = () => {
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-mono text-xs text-gray-400">
-                      {String(item.id).substring(0, 8)}
+                      #{item.id}
                     </TableCell>
                     <TableCell className="font-mono text-gray-600">
                       {item.classificacao}

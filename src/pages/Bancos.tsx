@@ -22,16 +22,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { BancosForm } from '@/components/forms/BancosForm'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
+import { SearchableFilter } from '@/components/SearchableFilter'
 import { Banco } from '@/lib/types'
 import { fetchAll, deleteRecord } from '@/services/crudService'
 import { toast } from 'sonner'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
@@ -75,6 +69,11 @@ const BancosPage = () => {
   }
 
   const totalSaldo = data.reduce((sum, b) => sum + b.saldo_atual, 0)
+
+  const bankOptions = [...new Set(data.map((b) => b.banco))].map((b) => ({
+    value: b,
+    label: b,
+  }))
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -122,19 +121,12 @@ const BancosPage = () => {
         </div>
       ) : (
         <>
-          <Select value={bankFilter} onValueChange={setBankFilter}>
-            <SelectTrigger className="w-[200px] bg-white">
-              <SelectValue placeholder="Filtrar por banco" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Bancos</SelectItem>
-              {[...new Set(data.map((b) => b.banco))].map((b) => (
-                <SelectItem key={b} value={b}>
-                  {b}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableFilter
+            options={bankOptions}
+            value={bankFilter}
+            onValueChange={setBankFilter}
+            placeholder="Filtrar por banco"
+          />
 
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             <Table>
@@ -152,7 +144,7 @@ const BancosPage = () => {
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-mono text-xs text-gray-400">
-                      {String(item.id).slice(0, 8)}
+                      #{item.id}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">

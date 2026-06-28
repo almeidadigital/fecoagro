@@ -4,8 +4,6 @@ import {
   type ComboboxFilterColumn,
   type ComboboxFilterState,
 } from '@/components/ComboboxFilter'
-import { FormaPagamento } from '@/lib/types'
-import useTransactionStore from '@/stores/useTransactionStore'
 
 export type FilterState = ComboboxFilterState
 
@@ -18,8 +16,6 @@ export function TransactionFilters({
   filters,
   setFilters,
 }: TransactionFiltersProps) {
-  const { categories } = useTransactionStore()
-
   const columns: ComboboxFilterColumn[] = [
     { value: 'description', label: 'Descrição' },
     {
@@ -29,19 +25,6 @@ export function TransactionFilters({
         { value: 'Receita', label: 'Receita' },
         { value: 'Despesa', label: 'Despesa' },
       ],
-    },
-    {
-      value: 'category',
-      label: 'Categoria',
-      options: categories.map((c) => ({ value: c.id, label: c.nome })),
-    },
-    {
-      value: 'payment_method',
-      label: 'Forma de Pagamento',
-      options: Object.values(FormaPagamento).map((m) => ({
-        value: m,
-        label: m,
-      })),
     },
   ]
 

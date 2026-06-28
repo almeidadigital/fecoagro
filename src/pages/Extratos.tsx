@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
+  Zap,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Banco, Transacao, TipoTransacao, FormaPagamento } from '@/lib/types'
 import { fetchAll } from '@/services/crudService'
+import { reconciliationService } from '@/services/reconciliationService'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -39,6 +41,7 @@ export default function Extratos() {
   const [loading, setLoading] = useState(true)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [reconciling, setReconciling] = useState<string | null>(null)
+  const [autoReconciling, setAutoReconciling] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -46,7 +49,7 @@ export default function Extratos() {
       const [bancosData, transData] = await Promise.all([
         fetchAll<Banco>('bancos'),
         supabase
-          .from('transactions')
+          .from('critica')
           .select('*')
           .order('date', { ascending: false })
           .limit(50),
@@ -86,7 +89,7 @@ export default function Extratos() {
     try {
       setReconciling(id)
       const { error } = await supabase
-        .from('transactions')
+        .from('critica')
         .update({ reconciled: true })
         .eq('id', id)
       if (error) throw error
@@ -98,6 +101,28 @@ export default function Extratos() {
       toast.error('Erro ao reconciliar transação')
     } finally {
       setReconciling(null)
+    }
+  }
+
+  const handleAutoReconcile = async () => {
+    try {
+      setAutoReconciling(true)
+      toast.info('Iniciando reconciliação automática...')
+      const result = await reconciliationService.autoReconcile()
+      if (result.matched > 0) {
+        toast.success(
+          `${result.matched} de ${result.total} transações reconciliadas automaticamente!`,
+        )
+      } else {
+        toast.info(
+          `Nenhuma correspondência encontrada para ${result.total} transações pendentes.`,
+        )
+      }
+      await loadData()
+    } catch {
+      toast.error('Erro na reconciliação automática')
+    } finally {
+      setAutoReconciling(false)
     }
   }
 
@@ -120,9 +145,23 @@ export default function Extratos() {
             Acompanhe movimentações, saldos e reconciliação.
           </p>
         </div>
-        <Button variant="outline" onClick={() => setPdfOpen(true)}>
-          <FileUp className="w-4 h-4 mr-2" /> Importar Extrato PDF
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleAutoReconcile}
+            disabled={autoReconciling}
+          >
+            {autoReconciling ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4 mr-2" />
+            )}
+            Auto Reconciliação
+          </Button>
+          <Button variant="outline" onClick={() => setPdfOpen(true)}>
+            <FileUp className="w-4 h-4 mr-2" /> Importar Extrato PDF
+          </Button>
+        </div>
       </div>
 
       <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center justify-between">
@@ -165,17 +204,26 @@ export default function Extratos() {
         ))}
       </div>
 
-      {/* Reconciliation Section */}
       <Card className="rounded-xl border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-bold flex items-center justify-between">
             <span>Reconciliação</span>
-            <Badge
-              variant="secondary"
-              className="bg-primary/10 text-primary font-normal"
-            >
-              {reconciledCount} / {movements.length} reconciliadas
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className="bg-primary/10 text-primary font-normal"
+              >
+                {reconciledCount} / {movements.length} reconciliadas
+              </Badge>
+              {unreconciled.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-50 text-amber-700 font-normal"
+                >
+                  {unreconciled.length} pendentes
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-auto">
@@ -259,7 +307,6 @@ export default function Extratos() {
         </CardContent>
       </Card>
 
-      {/* Recent Movements */}
       <Card className="rounded-xl border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-bold">
@@ -273,7 +320,6 @@ export default function Extratos() {
                 <TableRow className="bg-gray-50/50">
                   <TableHead className="w-[120px]">Data</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Forma de Pagamento</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="w-[100px] text-center">
                     Status
@@ -307,9 +353,6 @@ export default function Extratos() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
-                      {m.forma_pagamento_id}
-                    </TableCell>
                     <TableCell
                       className={cn(
                         'text-right font-bold text-sm',
@@ -323,9 +366,15 @@ export default function Extratos() {
                     </TableCell>
                     <TableCell className="text-center">
                       {m.reconciled ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 inline" />
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Reconciliado
+                        </span>
                       ) : (
-                        <Circle className="w-5 h-5 text-gray-300 inline" />
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+                          <Circle className="w-4 h-4" />
+                          Pendente
+                        </span>
                       )}
                     </TableCell>
                   </TableRow>

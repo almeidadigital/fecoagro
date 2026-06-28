@@ -63,12 +63,6 @@ const formSchema = z.object({
   valor: z.coerce
     .number()
     .min(0.01, { message: 'O valor deve ser maior que 0.' }),
-  categoria_id: z.string({
-    required_error: 'Por favor selecione uma categoria.',
-  }),
-  forma_pagamento_id: z.nativeEnum(FormaPagamento, {
-    required_error: 'Por favor selecione uma forma de pagamento.',
-  }),
   observacoes: z.string().optional(),
   nota_fiscal_id: z.string().optional(),
 })
@@ -85,7 +79,6 @@ export function TransactionForm({
   transactionToEdit,
 }: TransactionFormProps) {
   const {
-    categories,
     centroCustos,
     atividades,
     planoContas,
@@ -112,11 +105,9 @@ export function TransactionForm({
       descricao: '',
       valor: 0,
       observacoes: '',
-      categoria_id: '',
       centro_custo_id: '',
       atividade_id: '',
       plano_conta_id: '',
-      forma_pagamento_id: FormaPagamento.CartaoCredito,
       data: new Date(),
       nota_fiscal_id: '',
     },
@@ -128,11 +119,9 @@ export function TransactionForm({
         data: transactionToEdit.data,
         descricao: transactionToEdit.descricao,
         valor: transactionToEdit.valor,
-        categoria_id: transactionToEdit.categoria_id,
-        centro_custo_id: transactionToEdit.centro_custo_id || '',
-        atividade_id: transactionToEdit.atividade_id || '',
-        plano_conta_id: transactionToEdit.plano_conta_id || '',
-        forma_pagamento_id: transactionToEdit.forma_pagamento_id,
+        centro_custo_id: String(transactionToEdit.centro_custo_id || ''),
+        atividade_id: String(transactionToEdit.atividade_id || ''),
+        plano_conta_id: String(transactionToEdit.plano_conta_id || ''),
         observacoes: transactionToEdit.observacoes || '',
         nota_fiscal_id: transactionToEdit.nota_fiscal_id || '',
       })
@@ -141,11 +130,9 @@ export function TransactionForm({
         descricao: '',
         valor: 0,
         observacoes: '',
-        categoria_id: '',
         centro_custo_id: '',
         atividade_id: '',
         plano_conta_id: '',
-        forma_pagamento_id: FormaPagamento.CartaoCredito,
         data: new Date(),
         nota_fiscal_id: '',
       })
@@ -159,7 +146,11 @@ export function TransactionForm({
         await updateTransaction(transactionToEdit.id, values)
         toast.success('Crítica atualizada com sucesso')
       } else {
-        await addTransaction(values)
+        await addTransaction({
+          ...values,
+          categoria_id: 'Geral',
+          forma_pagamento_id: FormaPagamento.ContaCorrente,
+        })
         toast.success('Crítica criada com sucesso')
       }
       onOpenChange(false)
@@ -246,7 +237,7 @@ export function TransactionForm({
                     </FormControl>
                     <SelectContent>
                       {centroCustos.map((cc) => (
-                        <SelectItem key={cc.id} value={cc.id}>
+                        <SelectItem key={cc.id} value={String(cc.id)}>
                           {cc.centro_de_custos}
                         </SelectItem>
                       ))}
@@ -274,7 +265,7 @@ export function TransactionForm({
                     </FormControl>
                     <SelectContent>
                       {atividades.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
+                        <SelectItem key={a.id} value={String(a.id)}>
                           {a.atividade}
                         </SelectItem>
                       ))}
@@ -304,8 +295,9 @@ export function TransactionForm({
                           )}
                         >
                           {field.value
-                            ? planoContas.find((pc) => pc.id === field.value)
-                                ?.descricao
+                            ? planoContas.find(
+                                (pc) => String(pc.id) === field.value,
+                              )?.descricao
                             : 'Buscar conta...'}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -326,15 +318,19 @@ export function TransactionForm({
                                 key={pc.id}
                                 value={pc.descricao || ''}
                                 onSelect={() => {
-                                  form.setValue('plano_conta_id', pc.id, {
-                                    shouldValidate: true,
-                                  })
+                                  form.setValue(
+                                    'plano_conta_id',
+                                    String(pc.id),
+                                    {
+                                      shouldValidate: true,
+                                    },
+                                  )
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    pc.id === field.value
+                                    String(pc.id) === field.value
                                       ? 'opacity-100'
                                       : 'opacity-0',
                                   )}
@@ -366,66 +362,15 @@ export function TransactionForm({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="valor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="forma_pagamento_id"
+              name="valor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Forma de Pagamento</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o método" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(FormaPagamento).map((method) => (
-                        <SelectItem key={method} value={method}>
-                          {method}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Valor</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
