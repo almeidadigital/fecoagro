@@ -1,90 +1,73 @@
 import { useDashboard } from '@/hooks/use-dashboard'
 import { KPICard } from '@/components/dashboard/KPICard'
-import { PerformanceChart } from '@/components/dashboard/PerformanceChart'
-import { CategoryDistributionChart } from '@/components/dashboard/CategoryDistribution'
+import { SummaryCards } from '@/components/dashboard/SummaryCards'
+import { FinancialEvolutionChart } from '@/components/dashboard/FinancialEvolutionChart'
+import { StatusChart } from '@/components/dashboard/StatusChart'
+import { DistributionChart } from '@/components/dashboard/DistributionChart'
+import { DebitCreditChart } from '@/components/dashboard/DebitCreditChart'
+import { ExtratosSummary } from '@/components/dashboard/ExtratosSummary'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
-import { ExpenseDistribution } from '@/components/dashboard/ExpenseDistribution'
 import { KPIMetric } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SummaryCards } from '@/components/dashboard/SummaryCards'
-import { CostDistributionChart } from '@/components/dashboard/CostDistributionChart'
 import { FecoagroLogo } from '@/components/FecoagroLogo'
+import { formatCurrency } from '@/lib/format'
 
 const Index = () => {
   const {
     kpis,
     recentTransactions,
-    chartData,
-    categoryDistribution,
-    paymentDistribution,
-    costDistribution,
+    razaoEvolution,
+    debitCreditTotals,
+    recentExtratos,
+    centroCustoDistribution,
+    atividadeDistribution,
+    planoContasDistribution,
+    statusDistribution,
     loading,
     summaryData,
     summaryLoading,
   } = useDashboard()
 
-  // Transform API data to KPI card format
   const kpiData: KPIMetric[] = kpis
     ? [
         {
-          label: 'Saldo Total',
-          value: kpis.totalBalance,
-          subValue: 'Acumulado',
-          trend: 0, // Total balance trend is complex without historical snapshots
-          trendLabel: 'Tempo real',
+          label: 'Total Críticas',
+          value: String(kpis.totalCriticas),
+          subValue: formatCurrency(kpis.totalCriticasAmount),
+          trend: 0,
+          trendLabel: 'Registros',
           progress: 100,
           color: 'blue',
         },
         {
-          label: 'Receita Mensal',
-          value: kpis.monthIncome,
-          subValue: 'Este mês',
-          trend:
-            kpis.lastMonthIncome > 0
-              ? Math.round(
-                  ((kpis.monthIncome - kpis.lastMonthIncome) /
-                    kpis.lastMonthIncome) *
-                    100,
-                )
-              : 0,
-          trendLabel: 'vs Mês anterior',
-          progress: 75, // Could be vs goal
-          color: 'green',
-        },
-        {
-          label: 'Despesa Mensal',
-          value: kpis.monthExpense,
-          subValue: 'Este mês',
-          trend:
-            kpis.lastMonthExpense > 0
-              ? Math.round(
-                  ((kpis.monthExpense - kpis.lastMonthExpense) /
-                    kpis.lastMonthExpense) *
-                    100,
-                )
-              : 0,
-          trendLabel: 'vs Mês anterior',
+          label: 'Pendentes',
+          value: String(kpis.pendingCriticas),
+          subValue: 'Aguardando processamento',
+          trend: 0,
+          trendLabel: 'Status',
           progress:
-            kpis.monthIncome > 0
-              ? (kpis.monthExpense / kpis.monthIncome) * 100
+            kpis.totalCriticas > 0
+              ? (kpis.pendingCriticas / kpis.totalCriticas) * 100
               : 0,
-          color: 'red',
+          color: 'yellow',
         },
         {
-          label: 'Eficiência',
-          value:
-            kpis.monthIncome > 0
-              ? `${Math.round(((kpis.monthIncome - kpis.monthExpense) / kpis.monthIncome) * 100)}%`
-              : '0%',
-          subValue: 'Margem',
+          label: 'Saldo Razão',
+          value: kpis.razaoBalance,
+          subValue: 'Consolidado',
           trend: 0,
           trendLabel: 'Atual',
-          progress:
-            kpis.monthIncome > 0
-              ? ((kpis.monthIncome - kpis.monthExpense) / kpis.monthIncome) *
-                100
-              : 0,
+          progress: 100,
           color: 'purple',
+        },
+        {
+          label: 'Saldo Bancário',
+          value: kpis.bankBalance,
+          subValue: 'Consolidado',
+          trend: 0,
+          trendLabel: 'Atual',
+          progress: 100,
+          color: 'green',
         },
       ]
     : []
@@ -119,7 +102,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* KPI Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {kpiData.map((kpi, index) => (
           <div key={index} className="h-[140px]">
@@ -128,32 +110,51 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Summary Cards */}
       <SummaryCards data={summaryData} loading={summaryLoading} />
 
-      {/* Middle Section: Performance + Categories */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-auto min-h-[400px]">
         <div className="xl:col-span-2 h-[400px] xl:h-full">
-          <PerformanceChart data={chartData} />
+          <FinancialEvolutionChart data={razaoEvolution} />
         </div>
         <div className="h-[400px] xl:h-full">
-          <CategoryDistributionChart data={categoryDistribution} />
+          <StatusChart data={statusDistribution} />
         </div>
       </div>
 
-      {/* Bottom Section: Recent Transactions + Expense Breakdown */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-auto min-h-[400px]">
+        <div className="h-full min-h-[400px]">
+          <DistributionChart
+            title="Distribuição por Centro de Custos"
+            data={centroCustoDistribution}
+          />
+        </div>
+        <div className="h-full min-h-[400px]">
+          <DistributionChart
+            title="Distribuição por Atividade"
+            data={atividadeDistribution}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-auto min-h-[400px]">
+        <div className="h-full min-h-[400px]">
+          <DistributionChart
+            title="Distribuição por Plano de Contas"
+            data={planoContasDistribution}
+          />
+        </div>
+        <div className="h-full min-h-[400px]">
+          <DebitCreditChart data={debitCreditTotals} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-auto min-h-[400px]">
+        <div className="h-full min-h-[400px]">
+          <ExtratosSummary data={recentExtratos} />
+        </div>
         <div className="h-full min-h-[400px]">
           <RecentTransactions transactions={recentTransactions} />
         </div>
-        <div className="h-full min-h-[400px]">
-          <ExpenseDistribution data={paymentDistribution} />
-        </div>
-      </div>
-
-      {/* Cost Distribution by Centro de Custos */}
-      <div className="h-[400px]">
-        <CostDistributionChart data={costDistribution} />
       </div>
     </div>
   )

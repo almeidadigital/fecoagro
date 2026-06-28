@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PaymentMethodDistribution } from '@/lib/types'
 import {
   PieChart,
   Pie,
@@ -9,20 +8,19 @@ import {
   Legend,
 } from 'recharts'
 import { ChartContainer } from '@/components/ui/chart'
+import { StatusDistribution } from '@/lib/types'
 
-interface ExpenseDistributionProps {
-  data: PaymentMethodDistribution[]
+interface StatusChartProps {
+  data: StatusDistribution[]
 }
 
-export function ExpenseDistribution({ data }: ExpenseDistributionProps) {
+export function StatusChart({ data }: StatusChartProps) {
   const hasData = data.length > 0 && data.some((d) => d.value > 0)
 
   return (
     <Card className="rounded-3xl border-none shadow-sm h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="text-lg font-bold">
-          Fluxo por Pagamento (Despesas)
-        </CardTitle>
+        <CardTitle className="text-lg font-bold">Status das Críticas</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 min-h-[250px] relative">
         {hasData ? (
@@ -46,9 +44,7 @@ export function ExpenseDistribution({ data }: ExpenseDistributionProps) {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) =>
-                  `R$ ${value.toLocaleString('pt-BR')}`
-                }
+                formatter={(value: number) => `${value} registro(s)`}
                 contentStyle={{
                   borderRadius: '12px',
                   border: 'none',
@@ -65,7 +61,7 @@ export function ExpenseDistribution({ data }: ExpenseDistributionProps) {
           </ChartContainer>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-400 text-sm">
-            Nenhum dado para este mês
+            Nenhum dado de status
           </div>
         )}
       </CardContent>

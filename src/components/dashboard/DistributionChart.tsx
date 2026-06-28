@@ -2,19 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CategoryDistribution } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-interface CategoryDistributionProps {
+interface DistributionChartProps {
+  title: string
   data: CategoryDistribution[]
 }
 
-export function CategoryDistributionChart({ data }: CategoryDistributionProps) {
+export function DistributionChart({ title, data }: DistributionChartProps) {
   const hasData = data.length > 0
 
   return (
     <Card className="rounded-3xl border-none shadow-sm h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="text-lg font-bold">
-          Top Categorias de Gastos
-        </CardTitle>
+        <CardTitle className="text-lg font-bold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
         {hasData ? (
@@ -46,7 +45,7 @@ export function CategoryDistributionChart({ data }: CategoryDistributionProps) {
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-400 text-sm min-h-[200px]">
-            Sem gastos este mês
+            Sem dados
           </div>
         )}
       </CardContent>

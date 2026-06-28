@@ -97,11 +97,28 @@ export interface KPIMetric {
 }
 
 export interface DashboardKPIs {
-  totalBalance: number
-  monthIncome: number
-  monthExpense: number
-  lastMonthIncome: number
-  lastMonthExpense: number
+  totalCriticas: number
+  pendingCriticas: number
+  completedCriticas: number
+  totalCriticasAmount: number
+  razaoBalance: number
+  bankBalance: number
+}
+
+export interface StatusDistribution {
+  name: string
+  value: number
+  color: string
+}
+
+export interface RazaoEvolutionPoint {
+  date: string
+  saldo: number
+}
+
+export interface DebitCreditTotals {
+  debito: number
+  credito: number
 }
 
 export interface ChartDataPoint {

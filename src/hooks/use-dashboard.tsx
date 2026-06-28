@@ -3,79 +3,188 @@ import { dashboardService } from '@/services/dashboardService'
 import {
   DashboardKPIs,
   Transacao,
-  ChartDataPoint,
   CategoryDistribution,
-  TipoTransacao,
-  PaymentMethodDistribution,
+  StatusDistribution,
+  RazaoEvolutionPoint,
+  DebitCreditTotals,
   CentroCusto,
+  Atividade,
+  PlanoConta,
 } from '@/lib/types'
 import { auxiliaryService } from '@/services/auxiliaryService'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import { mockCategories } from '@/lib/data'
 import { summaryService, SummaryData } from '@/services/summaryService'
 import { toast } from 'sonner'
 import useTransactionStore from '@/stores/useTransactionStore'
 import { useAuth } from '@/hooks/use-auth'
 
+const COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-yellow-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+  'bg-red-500',
+]
+
+const STATUS_COLORS: Record<string, string> = {
+  pendente: '#F59E0B',
+  concluido: '#10B981',
+  cancelado: '#EF4444',
+}
+
+function processDistribution(
+  transactions: Transacao[],
+  fkField: keyof Transacao,
+  labels: { id: number; name: string }[],
+): CategoryDistribution[] {
+  const groupMap = new Map<number, number>()
+  transactions.forEach((t) => {
+    const fk = t[fkField] as number | null
+    if (fk !== null && fk !== undefined) {
+      groupMap.set(fk, (groupMap.get(fk) || 0) + t.amount)
+    }
+  })
+  const total = Array.from(groupMap.values()).reduce((a, b) => a + b, 0)
+  return Array.from(groupMap.entries())
+    .map(([id, value], index) => ({
+      name: labels.find((l) => l.id === id)?.name || 'Sem vínculo',
+      value,
+      percentage: total > 0 ? (value / total) * 100 : 0,
+      color: COLORS[index % COLORS.length],
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 7)
+}
+
+function processStatusDistribution(
+  transactions: Transacao[],
+): StatusDistribution[] {
+  const statusMap = new Map<string, number>()
+  transactions.forEach((t) => {
+    const status = t.status || 'pendente'
+    statusMap.set(status, (statusMap.get(status) || 0) + 1)
+  })
+  return Array.from(statusMap.entries()).map(([name, value]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value,
+    color: STATUS_COLORS[name] || '#6B7280',
+  }))
+}
+
 export const useDashboard = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null)
   const [recentTransactions, setRecentTransactions] = useState<Transacao[]>([])
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([])
-  const [categoryDistribution, setCategoryDistribution] = useState<
+  const [razaoEvolution, setRazaoEvolution] = useState<RazaoEvolutionPoint[]>(
+    [],
+  )
+  const [debitCreditTotals, setDebitCreditTotals] = useState<DebitCreditTotals>(
+    {
+      debito: 0,
+      credito: 0,
+    },
+  )
+  const [recentExtratos, setRecentExtratos] = useState<
+    {
+      id: number
+      data: string
+      descricao: string
+      valor: number
+      tipo: string
+    }[]
+  >([])
+  const [centroCustoDistribution, setCentroCustoDistribution] = useState<
     CategoryDistribution[]
   >([])
-  const [paymentDistribution, setPaymentDistribution] = useState<
-    PaymentMethodDistribution[]
-  >([])
-  const [costDistribution, setCostDistribution] = useState<
+  const [atividadeDistribution, setAtividadeDistribution] = useState<
     CategoryDistribution[]
+  >([])
+  const [planoContasDistribution, setPlanoContasDistribution] = useState<
+    CategoryDistribution[]
+  >([])
+  const [statusDistribution, setStatusDistribution] = useState<
+    StatusDistribution[]
   >([])
   const [loading, setLoading] = useState(true)
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(true)
 
-  // Listen to transaction store changes to refresh dashboard
   const { transactions: storeTransactions } = useTransactionStore()
   const { role } = useAuth()
 
   const fetchData = useCallback(async () => {
-    // If role is not yet determined or is visitante, we might handle it early
     if (role === 'visitante') {
       setLoading(false)
       setSummaryLoading(false)
       setKpis(null)
       setRecentTransactions([])
-      setChartData([])
-      setCategoryDistribution([])
-      setPaymentDistribution([])
-      setCostDistribution([])
+      setRazaoEvolution([])
+      setDebitCreditTotals({ debito: 0, credito: 0 })
+      setRecentExtratos([])
+      setCentroCustoDistribution([])
+      setAtividadeDistribution([])
+      setPlanoContasDistribution([])
+      setStatusDistribution([])
       setSummaryData(null)
       return
     }
 
     try {
       setLoading(true)
-      // We fetch data regardless of role, trusting RLS and service logic to filter
-      const [kpiData, recentData, monthData, summary, centroCustosData] =
-        await Promise.all([
-          dashboardService.getKPIs(),
-          dashboardService.getRecentTransactions(6),
-          dashboardService.getTransactionsForPeriod(
-            startOfMonth(new Date()),
-            endOfMonth(new Date()),
-          ),
-          summaryService.getSummary(),
-          auxiliaryService.fetchCentroCustos(),
-        ])
+      const [
+        kpiData,
+        recentData,
+        allCritica,
+        razaoData,
+        debitCredit,
+        extratos,
+        summary,
+        centroCustos,
+        atividades,
+        planoContas,
+      ] = await Promise.all([
+        dashboardService.getKPIs(),
+        dashboardService.getRecentTransactions(6),
+        dashboardService.getCriticaForDistributions(),
+        dashboardService.getRazaoEvolution(),
+        dashboardService.getDebitCreditTotals(),
+        dashboardService.getRecentExtratos(6),
+        summaryService.getSummary(),
+        auxiliaryService.fetchCentroCustos(),
+        auxiliaryService.fetchAtividades(),
+        auxiliaryService.fetchPlanoContas(),
+      ])
 
       setKpis(kpiData)
       setRecentTransactions(recentData)
+      setRazaoEvolution(razaoData)
+      setDebitCreditTotals(debitCredit)
+      setRecentExtratos(extratos)
       setSummaryData(summary)
-      processChartData(monthData)
-      processCategoryData(monthData)
-      processPaymentData(monthData)
-      processCostData(monthData, centroCustosData)
+
+      const ccLabels = (centroCustos as CentroCusto[]).map((c) => ({
+        id: c.id,
+        name: c.centro_de_custos,
+      }))
+      const atLabels = (atividades as Atividade[]).map((a) => ({
+        id: a.id,
+        name: a.atividade,
+      }))
+      const pcLabels = (planoContas as PlanoConta[]).map((p) => ({
+        id: p.id,
+        name: p.descricao || 'Sem nome',
+      }))
+
+      setCentroCustoDistribution(
+        processDistribution(allCritica, 'centro_custo_id', ccLabels),
+      )
+      setAtividadeDistribution(
+        processDistribution(allCritica, 'atividade_id', atLabels),
+      )
+      setPlanoContasDistribution(
+        processDistribution(allCritica, 'plano_conta_id', pcLabels),
+      )
+      setStatusDistribution(processStatusDistribution(allCritica))
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
       toast.error('Erro ao carregar dados do dashboard')
@@ -85,159 +194,20 @@ export const useDashboard = () => {
     }
   }, [role])
 
-  // Process data for charts
-  const processChartData = (transactions: Transacao[]) => {
-    // For collaborators, 'transactions' might only contain 1 item if it falls in the current month
-    const start = startOfMonth(new Date())
-    const end = endOfMonth(new Date())
-    const days = eachDayOfInterval({ start, end })
-
-    const data: ChartDataPoint[] = days.map((day) => {
-      const dayStr = format(day, 'yyyy-MM-dd')
-      const dayTrans = transactions.filter(
-        (t) => format(t.data, 'yyyy-MM-dd') === dayStr,
-      )
-
-      return {
-        date: format(day, 'd MMM', { locale: ptBR }),
-        revenue: dayTrans
-          .filter((t) => t.tipo_id === TipoTransacao.Receita)
-          .reduce((acc, curr) => acc + curr.valor, 0),
-        expenses: dayTrans
-          .filter((t) => t.tipo_id === TipoTransacao.Despesa)
-          .reduce((acc, curr) => acc + curr.valor, 0),
-      }
-    })
-    setChartData(data)
-  }
-
-  const processCategoryData = (transactions: Transacao[]) => {
-    const expenses = transactions.filter(
-      (t) => t.tipo_id === TipoTransacao.Despesa,
-    )
-    const totalExpenses = expenses.reduce((acc, curr) => acc + curr.valor, 0)
-
-    const categoryMap = new Map<string, number>()
-    expenses.forEach((t) => {
-      const current = categoryMap.get(t.categoria_id) || 0
-      categoryMap.set(t.categoria_id, current + t.valor)
-    })
-
-    const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-red-500',
-    ]
-
-    const distribution: CategoryDistribution[] = Array.from(
-      categoryMap.entries(),
-    )
-      .map(([id, value], index) => {
-        const catName =
-          mockCategories.find((c) => c.id === id)?.nome || 'Outros'
-        return {
-          name: catName,
-          value,
-          percentage: totalExpenses > 0 ? (value / totalExpenses) * 100 : 0,
-          color: colors[index % colors.length],
-        }
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5) // Top 5 categories
-
-    setCategoryDistribution(distribution)
-  }
-
-  const processPaymentData = (transactions: Transacao[]) => {
-    const expenses = transactions.filter(
-      (t) => t.tipo_id === TipoTransacao.Despesa,
-    )
-    const methodMap = new Map<string, number>()
-
-    expenses.forEach((t) => {
-      const current = methodMap.get(t.forma_pagamento_id) || 0
-      methodMap.set(t.forma_pagamento_id, current + t.valor)
-    })
-
-    const colors = [
-      '#3B82F6', // blue
-      '#10B981', // green
-      '#F59E0B', // yellow
-      '#8B5CF6', // purple
-      '#EC4899', // pink
-    ]
-
-    const distribution: PaymentMethodDistribution[] = Array.from(
-      methodMap.entries(),
-    ).map(([name, value], index) => ({
-      name,
-      value,
-      color: colors[index % colors.length],
-    }))
-
-    setPaymentDistribution(distribution)
-  }
-
-  const processCostData = (
-    transactions: Transacao[],
-    centroCustos: CentroCusto[],
-  ) => {
-    const expenses = transactions.filter(
-      (t) => t.tipo_id === TipoTransacao.Despesa,
-    )
-    const totalExpenses = expenses.reduce((acc, curr) => acc + curr.valor, 0)
-
-    const costMap = new Map<string, number>()
-    expenses.forEach((t) => {
-      if (t.centro_custo_id) {
-        const current = costMap.get(t.centro_custo_id) || 0
-        costMap.set(t.centro_custo_id, current + t.valor)
-      }
-    })
-
-    const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-red-500',
-    ]
-
-    const distribution: CategoryDistribution[] = Array.from(costMap.entries())
-      .map(([id, value], index) => {
-        const ccName =
-          centroCustos.find((c) => c.id === id)?.centro_de_custos ||
-          'Sem Centro de Custo'
-        return {
-          name: ccName,
-          value,
-          percentage: totalExpenses > 0 ? (value / totalExpenses) * 100 : 0,
-          color: colors[index % colors.length],
-        }
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5)
-
-    setCostDistribution(distribution)
-  }
-
   useEffect(() => {
     fetchData()
-  }, [fetchData, storeTransactions]) // Refresh when transactions change in store
+  }, [fetchData, storeTransactions])
 
   return {
     kpis,
     recentTransactions,
-    chartData,
-    categoryDistribution,
-    paymentDistribution,
-    costDistribution,
+    razaoEvolution,
+    debitCreditTotals,
+    recentExtratos,
+    centroCustoDistribution,
+    atividadeDistribution,
+    planoContasDistribution,
+    statusDistribution,
     loading,
     summaryData,
     summaryLoading,
