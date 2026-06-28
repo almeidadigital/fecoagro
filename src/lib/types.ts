@@ -47,6 +47,8 @@ export interface ExtratoBancario {
   valor: number
   tipo: 'debit' | 'credit'
   banco_id: number
+  razao_id?: number | null
+  reconciled?: boolean
   created_at?: string | null
   updated_at?: string | null
 }
