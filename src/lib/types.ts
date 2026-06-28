@@ -1,5 +1,3 @@
-/* Data models matching the specification */
-
 export enum TipoTransacao {
   Receita = 'Receita',
   Despesa = 'Despesa',
@@ -30,15 +28,15 @@ export interface Transacao {
   tipo_id?: TipoTransacao
   forma_pagamento_id: FormaPagamento
   observacoes?: string
-  centro_custo_id?: string
-  atividade_id?: string
-  plano_conta_id?: string
+  centro_custo_id?: number
+  atividade_id?: number
+  plano_conta_id?: number
   nota_fiscal_id?: string
   reconciled?: boolean
 }
 
 export interface PlanoConta {
-  id: string
+  id: number
   user_id: string
   classificacao: string
   descricao: string
@@ -48,7 +46,7 @@ export interface PlanoConta {
 }
 
 export interface CentroCusto {
-  id: string
+  id: number
   user_id: string
   centro_de_custos: string
   created_at?: string | null
@@ -56,7 +54,7 @@ export interface CentroCusto {
 }
 
 export interface Atividade {
-  id: string
+  id: number
   user_id: string
   atividade: string
   created_at?: string | null
@@ -79,6 +77,7 @@ export interface KPIMetric {
   trendLabel: string
   progress: number
   color: 'blue' | 'green' | 'purple' | 'yellow' | 'red' | 'gray'
+  to?: string
 }
 
 export interface DashboardKPIs {
@@ -129,13 +128,13 @@ export interface Razao {
   debito: number
   credito: number
   saldo: number
-  plano_conta_id?: string | null
+  plano_conta_id?: number | null
   created_at?: string | null
   updated_at?: string | null
 }
 
 export interface Banco {
-  id: string
+  id: number
   user_id: string
   banco: string
   agencia: string

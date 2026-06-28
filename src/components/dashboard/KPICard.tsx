@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { KPIMetric } from '@/lib/types'
@@ -5,9 +6,10 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface KPICardProps {
   data: KPIMetric
+  to?: string
 }
 
-export function KPICard({ data }: KPICardProps) {
+export function KPICard({ data, to }: KPICardProps) {
   const isPositive = data.trend > 0
   const isNeutral = data.trend === 0
 
@@ -30,14 +32,13 @@ export function KPICard({ data }: KPICardProps) {
     return val
   }
 
-  return (
-    <Card className="rounded-3xl border-none shadow-sm hover:scale-[1.02] transition-transform duration-300 h-full">
+  const card = (
+    <Card className="rounded-3xl border-none shadow-sm hover:scale-[1.02] hover:shadow-md transition-all duration-300 h-full">
       <CardContent className="p-6 flex justify-between items-center h-full">
         <div className="flex flex-col justify-between h-full gap-4 w-full">
           <h3 className="text-sm font-medium text-gray-500 truncate">
             {data.label}
           </h3>
-
           <div className="flex flex-col">
             <span className="text-2xl font-bold text-gray-900">
               {formatValue(data.value)}
@@ -48,7 +49,6 @@ export function KPICard({ data }: KPICardProps) {
               </span>
             )}
           </div>
-
           <div className="flex items-center gap-2">
             <div
               className={cn(
@@ -74,9 +74,7 @@ export function KPICard({ data }: KPICardProps) {
             </span>
           </div>
         </div>
-
         <div className="h-full flex items-end ml-4">
-          {/* Simple progress ring or bar could go here, but omitted for cleaner real-time UI */}
           <div className="h-16 w-1.5 rounded-full bg-gray-100 relative overflow-hidden">
             <div
               className={cn(
@@ -92,4 +90,13 @@ export function KPICard({ data }: KPICardProps) {
       </CardContent>
     </Card>
   )
+
+  if (to) {
+    return (
+      <Link to={to} className="block h-full">
+        {card}
+      </Link>
+    )
+  }
+  return card
 }

@@ -5,10 +5,8 @@ import {
   Receipt,
   BookOpen,
   Landmark,
-  LifeBuoy,
   Settings,
   LogOut,
-  Users,
   ListTree,
   Briefcase,
   Building2,
@@ -131,6 +129,12 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             to="/razao"
             isActive={pathname === '/razao'}
           />
+          <SidebarItem
+            icon={ReceiptText}
+            label="Extratos"
+            to="/extratos"
+            isActive={pathname === '/extratos'}
+          />
         </SidebarGroup>
 
         <SidebarGroup title="Financeiro">
@@ -139,12 +143,6 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             label="Bancos"
             to="/bancos"
             isActive={pathname === '/bancos'}
-          />
-          <SidebarItem
-            icon={ReceiptText}
-            label="Extratos"
-            to="/extratos"
-            isActive={pathname === '/extratos'}
           />
         </SidebarGroup>
 
@@ -176,20 +174,6 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             to="/settings"
             isActive={pathname === '/settings'}
           />
-          <SidebarItem
-            icon={LifeBuoy}
-            label="Ajuda"
-            to="/help"
-            isActive={pathname === '/help'}
-          />
-          {role === 'admin' && (
-            <SidebarItem
-              icon={Users}
-              label="Gerenciar Usuários"
-              to="/users"
-              isActive={pathname === '/users'}
-            />
-          )}
         </SidebarGroup>
       </div>
 
@@ -204,7 +188,6 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             </span>
           </div>
         )}
-
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors w-full"

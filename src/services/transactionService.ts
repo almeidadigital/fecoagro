@@ -3,7 +3,6 @@ import { FilterState } from '@/components/transactions/TransactionFilters'
 import { Transacao, TipoTransacao, FormaPagamento, Role } from '@/lib/types'
 import { format } from 'date-fns'
 
-// Helper to map DB row to Transacao type
 const mapToTransacao = (row: any): Transacao => ({
   id: row.id,
   data: new Date(row.date),
@@ -20,7 +19,6 @@ const mapToTransacao = (row: any): Transacao => ({
   reconciled: row.reconciled || false,
 })
 
-// Helper to map Transacao to DB row
 const mapToRow = (transaction: Omit<Transacao, 'id'>, userId: string) => ({
   user_id: userId,
   date: format(transaction.data, 'yyyy-MM-dd'),
@@ -36,6 +34,20 @@ const mapToRow = (transaction: Omit<Transacao, 'id'>, userId: string) => ({
   nota_fiscal_id: transaction.nota_fiscal_id || null,
 })
 
+const textColumns = [
+  'description',
+  'descricao',
+  'conta',
+  'banco',
+  'agencia',
+  'conta_corrente',
+  'numero_nota',
+  'emissor',
+  'atividade',
+  'centro_de_custos',
+  'classificacao',
+]
+
 export const transactionService = {
   async fetchTransactions(filters: FilterState, role: Role) {
     const {
@@ -43,19 +55,11 @@ export const transactionService = {
     } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
 
-    // Initial query
-    let query = supabase.from('transactions').select('*')
+    let query = supabase.from('critica').select('*')
 
-    // Apply filters based on Role and FilterState
-    if (role === 'visitante') {
-      // Visitor should not see anything (RLS handles this too, but explicit return saves a call)
-      return []
-    }
+    if (role === 'visitante') return []
 
     if (role === 'colaborador') {
-      // Collaborator restricted view: Single most recent transaction.
-      // RLS enforces this, but we explicitly order and limit to match application logic expectations.
-      // We add ID sort to ensure deterministic behavior matching the RLS policy.
       query = query
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -63,37 +67,24 @@ export const transactionService = {
     }
 
     if (role === 'admin') {
-      // Admin sees all, applies filters
-      if (filters.search) {
-        query = query.ilike('description', `%${filters.search}%`)
+      if (filters.column && filters.value) {
+        if (textColumns.includes(filters.column)) {
+          query = query.ilike(filters.column, `%${filters.value}%`)
+        } else {
+          query = query.eq(filters.column, filters.value)
+        }
       }
-
-      if (filters.category !== 'all') {
-        query = query.eq('category', filters.category)
-      }
-
-      if (filters.paymentMethod !== 'all') {
-        query = query.eq('payment_method', filters.paymentMethod)
-      }
-
       if (filters.dateRange?.from) {
         query = query.gte('date', format(filters.dateRange.from, 'yyyy-MM-dd'))
         if (filters.dateRange.to) {
           query = query.lte('date', format(filters.dateRange.to, 'yyyy-MM-dd'))
         }
       }
-
-      // Default sort by date desc for full list
       query = query.order('date', { ascending: false })
     }
 
     const { data, error } = await query
-
-    if (error) {
-      console.error('Error fetching transactions:', error)
-      throw error
-    }
-
+    if (error) throw error
     return data.map(mapToTransacao)
   },
 
@@ -105,18 +96,15 @@ export const transactionService = {
 
     const dbRow = mapToRow(transaction, user.id)
     const { data, error } = await supabase
-      .from('transactions')
+      .from('critica')
       .insert(dbRow)
       .select()
       .single()
-
     if (error) throw error
     return mapToTransacao(data)
   },
 
   async updateTransaction(id: string, transaction: Partial<Transacao>) {
-    // Policies have been updated to allow Admins and Owners to update their transactions.
-
     const updates: any = {}
     if (transaction.data) updates.date = format(transaction.data, 'yyyy-MM-dd')
     if (transaction.descricao) updates.description = transaction.descricao
@@ -139,19 +127,17 @@ export const transactionService = {
       updates.reconciled = transaction.reconciled
 
     const { data, error } = await supabase
-      .from('transactions')
+      .from('critica')
       .update(updates)
       .eq('id', id)
       .select()
       .single()
-
     if (error) throw error
     return mapToTransacao(data)
   },
 
   async deleteTransaction(id: string) {
-    const { error } = await supabase.from('transactions').delete().eq('id', id)
-
+    const { error } = await supabase.from('critica').delete().eq('id', id)
     if (error) throw error
   },
 }

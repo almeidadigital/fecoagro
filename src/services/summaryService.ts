@@ -10,7 +10,7 @@ export interface SummaryData {
 export const summaryService = {
   async getSummary(): Promise<SummaryData> {
     const [criticas, notas, razao, bancos] = await Promise.all([
-      supabase.from('transactions').select('amount'),
+      supabase.from('critica').select('amount'),
       supabase.from('notas_fiscais').select('valor_total, status'),
       supabase.from('razao').select('debito, credito'),
       supabase.from('bancos').select('saldo_atual'),

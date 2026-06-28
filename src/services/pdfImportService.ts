@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 
 export type EntityType =
-  | 'transactions'
+  | 'critica'
   | 'notas_fiscais'
   | 'razao'
   | 'bancos'
