@@ -156,9 +156,9 @@ export function NotasFiscaisForm({
               name="emissor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Emissor</FormLabel>
+                  <FormLabel>Fornecedor</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do emissor..." {...field} />
+                    <Input placeholder="Nome do fornecedor..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
