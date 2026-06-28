@@ -307,10 +307,10 @@ const RazaoPage = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/50">
-                <TableHead className="w-[100px]">ID</TableHead>
                 <TableHead className="w-[120px]">Data</TableHead>
                 <TableHead>Conta</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead>Histórico</TableHead>
                 <TableHead className="text-right">Débito</TableHead>
                 <TableHead className="text-right">Crédito</TableHead>
                 <TableHead className="text-right">Saldo</TableHead>
@@ -320,9 +320,6 @@ const RazaoPage = () => {
             <TableBody>
               {data.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs text-gray-400">
-                    #{item.id}
-                  </TableCell>
                   <TableCell className="text-gray-600">
                     {new Date(item.data).toLocaleDateString('pt-BR')}
                   </TableCell>
@@ -331,6 +328,9 @@ const RazaoPage = () => {
                   </TableCell>
                   <TableCell className="text-gray-600">
                     {item.descricao}
+                  </TableCell>
+                  <TableCell className="text-gray-600">
+                    {item.historico ?? '-'}
                   </TableCell>
                   <TableCell className="text-right text-red-600 font-medium">
                     {item.debito > 0 ? formatCurrency(item.debito) : '-'}
