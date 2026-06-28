@@ -11,6 +11,7 @@ import {
   Briefcase,
   Building2,
   ReceiptText,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -108,6 +109,12 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           label="Dashboard"
           to="/"
           isActive={pathname === '/'}
+        />
+        <SidebarItem
+          icon={BarChart3}
+          label="Dashboard Executivo"
+          to="/dashboard-executivo"
+          isActive={pathname === '/dashboard-executivo'}
         />
 
         <SidebarGroup title="Operacional">

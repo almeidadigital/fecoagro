@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Layout from './components/Layout'
 import Index from './pages/Index'
+import DashboardExecutivo from './pages/DashboardExecutivo'
 import Critica from './pages/Critica'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
@@ -38,6 +39,10 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
+                <Route
+                  path="/dashboard-executivo"
+                  element={<DashboardExecutivo />}
+                />
                 <Route path="/critica" element={<Critica />} />
                 <Route path="/notas-fiscais" element={<NotasFiscais />} />
                 <Route path="/razao" element={<Razao />} />
