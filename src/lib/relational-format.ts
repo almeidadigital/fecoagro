@@ -33,9 +33,9 @@ export function formatNotaFiscal(
   id: number | null | undefined,
   list: NotaFiscal[],
 ): string {
-  if (!id) return 'N/A'
+  if (!id) return '-'
   const item = list.find((nf) => nf.id === id)
-  return item ? `${item.id} - ${item.numero_nota}` : 'N/A'
+  return item ? String(item.numero_nota) : '-'
 }
 
 export function atividadeOptions(
@@ -70,6 +70,6 @@ export function notaFiscalOptions(
 ): { value: string; label: string }[] {
   return list.map((nf) => ({
     value: String(nf.id),
-    label: `${nf.id} - ${nf.numero_nota}`,
+    label: String(nf.numero_nota),
   }))
 }
