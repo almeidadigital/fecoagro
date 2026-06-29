@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   ChevronRight,
   ChevronDown,
@@ -129,16 +129,13 @@ function NodeView({
 
 export function PlanoContasTree({ data }: { data: PlanoConta[] }) {
   const tree = useMemo(() => buildTree(data), [data])
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    const initial = new Set<string>()
-    for (const root of tree) {
-      initial.add(root.account.classificacao ?? '')
-      for (const child of root.children) {
-        initial.add(child.account.classificacao ?? '')
-      }
-    }
-    return initial
-  })
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(allKeys(tree)),
+  )
+
+  useEffect(() => {
+    setExpanded(new Set(allKeys(tree)))
+  }, [tree])
 
   const toggle = useCallback((key: string) => {
     setExpanded((prev) => {

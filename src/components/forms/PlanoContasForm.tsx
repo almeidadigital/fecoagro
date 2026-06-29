@@ -73,7 +73,13 @@ export function PlanoContasForm({
         await updateRecord('plano_contas', editItem.id, values)
         toast.success('Conta atualizada')
       } else {
-        await createRecord('plano_contas', values)
+        const { id, ...insertValues } = values as {
+          id?: number
+          classificacao: string
+          descricao: string
+          tipo: string
+        }
+        await createRecord('plano_contas', insertValues)
         toast.success('Conta criada')
       }
       onOpenChange(false)
