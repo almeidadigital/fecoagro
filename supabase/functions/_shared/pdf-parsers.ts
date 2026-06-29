@@ -77,6 +77,8 @@ export function parseRazao(text: string, userId: string): any[] {
     /cnpj/i,
     /^data\b.*vlr\s*debit/i,
     /^data\s+fl\s+ati\s+cc/i,
+    /^data\s+lote\s+seq/i,
+    /^lote\s+seq\s+fl\s+ati/i,
   ]
 
   function convertDate(s: string): string | null {
@@ -99,22 +101,29 @@ export function parseRazao(text: string, userId: string): any[] {
     return neg ? -v : v
   }
 
+  function nullIfZero(n: number | null | undefined): number | null {
+    if (!n || n === 0) return null
+    return n
+  }
+
   for (const line of lines) {
+    const cm = line.match(/CONTA\.?\s*:?\s*(\d{3,8})\s*\/\s*([\d.]+)/i)
+    if (cm && /sintetica/i.test(line)) {
+      planoContaId = parseInt(cm[1], 10)
+      contaClassificacao = cm[2]
+      break
+    }
     const sm = line.match(/(\d{3,6})\s*[-\s].*SINTETICA/i)
     if (sm) {
       planoContaId = parseInt(sm[1], 10)
       contaClassificacao = sm[1]
       break
     }
-  }
-  if (!planoContaId) {
-    for (const line of lines) {
-      const cm = line.match(/conta[:\s]+(\d{3,6})/i)
-      if (cm) {
-        planoContaId = parseInt(cm[1], 10)
-        contaClassificacao = cm[1]
-        break
-      }
+    const cm2 = line.match(/conta[:\s]+(\d{3,6})/i)
+    if (cm2) {
+      planoContaId = parseInt(cm2[1], 10)
+      contaClassificacao = cm2[1]
+      break
     }
   }
 
@@ -143,6 +152,35 @@ export function parseRazao(text: string, userId: string): any[] {
     }
     if (skipPatterns.some((p) => p.test(t))) continue
 
+    if (/saldo\s+inicial/i.test(t)) {
+      flush()
+      const dm = t.match(dateRe)
+      const date = dm
+        ? convertDate(dm[1])
+        : new Date().toISOString().split('T')[0]
+      const nums = [...t.matchAll(brNumRe)]
+      let saldo = 0
+      if (nums.length >= 1) {
+        saldo = parseBr(nums[nums.length - 1][0])
+      }
+      pending = {
+        user_id: userId,
+        data: date,
+        conta: contaClassificacao || String(planoContaId || ''),
+        historico: 'SALDO INICIAL',
+        debito: 0,
+        credito: 0,
+        saldo,
+        plano_conta_id: planoContaId,
+        lote: null,
+        filial_id: null,
+        atividade_id: null,
+        centro_custo_id: null,
+      }
+      flush()
+      continue
+    }
+
     const dm = t.match(dateRe)
 
     if (dm) {
@@ -152,31 +190,47 @@ export function parseRazao(text: string, userId: string): any[] {
 
       let rest = t.substring(t.indexOf(dm[1]) + dm[1].length).trim()
 
+      let lote: number | null = null
       let fl: number | null = null
       let ati: number | null = null
       let cc: number | null = null
 
-      const m3 = rest.match(
-        /^(\d{1,4})\s+(\d{1,4})\s+(\d{1,4})\s+(?=[A-Za-zÀ-ÿ])/,
+      const m5 = rest.match(
+        /^(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(?=[A-Za-zÀ-ÿ])/,
       )
-      if (m3) {
+      const m4 = rest.match(
+        /^(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(?=[A-Za-zÀ-ÿ])/,
+      )
+      const m3 = rest.match(
+        /^(\d{1,6})\s+(\d{1,6})\s+(\d{1,6})\s+(?=[A-Za-zÀ-ÿ])/,
+      )
+      const m2 = rest.match(/^(\d{1,6})\s+(\d{1,6})\s+(?=[A-Za-zÀ-ÿ])/)
+      const m1 = rest.match(/^(\d{1,6})\s+(?=[A-Za-zÀ-ÿ])/)
+
+      if (m5) {
+        lote = parseInt(m5[1], 10)
+        fl = parseInt(m5[3], 10)
+        ati = parseInt(m5[4], 10)
+        cc = parseInt(m5[5], 10)
+        rest = rest.substring(m5[0].length).trim()
+      } else if (m4) {
+        lote = parseInt(m4[1], 10)
+        fl = parseInt(m4[2], 10)
+        ati = parseInt(m4[3], 10)
+        cc = parseInt(m4[4], 10)
+        rest = rest.substring(m4[0].length).trim()
+      } else if (m3) {
         fl = parseInt(m3[1], 10)
         ati = parseInt(m3[2], 10)
         cc = parseInt(m3[3], 10)
         rest = rest.substring(m3[0].length).trim()
-      } else {
-        const m2 = rest.match(/^(\d{1,4})\s+(\d{1,4})\s+(?=[A-Za-zÀ-ÿ])/)
-        if (m2) {
-          fl = parseInt(m2[1], 10)
-          ati = parseInt(m2[2], 10)
-          rest = rest.substring(m2[0].length).trim()
-        } else {
-          const m1 = rest.match(/^(\d{1,4})\s+(?=[A-Za-zÀ-ÿ])/)
-          if (m1) {
-            fl = parseInt(m1[1], 10)
-            rest = rest.substring(m1[0].length).trim()
-          }
-        }
+      } else if (m2) {
+        fl = parseInt(m2[1], 10)
+        ati = parseInt(m2[2], 10)
+        rest = rest.substring(m2[0].length).trim()
+      } else if (m1) {
+        fl = parseInt(m1[1], 10)
+        rest = rest.substring(m1[0].length).trim()
       }
 
       const nums = [...rest.matchAll(brNumRe)]
@@ -211,9 +265,10 @@ export function parseRazao(text: string, userId: string): any[] {
         credito,
         saldo,
         plano_conta_id: planoContaId,
-        filial_id: fl,
-        atividade_id: ati,
-        centro_custo_id: cc,
+        lote,
+        filial_id: nullIfZero(fl),
+        atividade_id: nullIfZero(ati),
+        centro_custo_id: nullIfZero(cc),
       }
       pendingHist = ''
     } else if (pending) {
@@ -301,16 +356,25 @@ export function parseCritica(text: string, userId: string): any[] {
 
 export function parseCentroCustos(text: string, userId: string): any[] {
   const records: any[] = []
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length >= 3)
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length >= 3)
   for (let i = 0; i < Math.min(lines.length, 20); i++) {
-    records.push({ user_id: userId, centro_de_custos: lines[i].substring(0, 100) })
+    records.push({
+      user_id: userId,
+      centro_de_custos: lines[i].substring(0, 100),
+    })
   }
   return records
 }
 
 export function parseAtividades(text: string, userId: string): any[] {
   const records: any[] = []
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length >= 3)
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length >= 3)
   for (let i = 0; i < Math.min(lines.length, 20); i++) {
     records.push({ user_id: userId, atividade: lines[i].substring(0, 100) })
   }

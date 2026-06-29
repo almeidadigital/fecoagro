@@ -28,11 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Razao, PlanoConta, Filial } from '@/lib/types'
+import { Razao, PlanoConta, Filial, Atividade, CentroCusto } from '@/lib/types'
 import { createRecord, updateRecord } from '@/services/crudService'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import { toast } from 'sonner'
 import { filialOptions } from '@/lib/filial-format'
+import { atividadeOptions, centroCustoOptions } from '@/lib/relational-format'
 
 const schema = z.object({
   data: z.string().min(1, 'Data é obrigatória'),
@@ -43,6 +44,8 @@ const schema = z.object({
   plano_conta_id: z.string().min(1, 'Conta é obrigatória'),
   lote: z.coerce.number().int().optional().nullable(),
   filial_id: z.string().optional(),
+  atividade_id: z.string().optional(),
+  centro_custo_id: z.string().optional(),
 })
 
 interface Props {
@@ -62,11 +65,21 @@ export function RazaoForm({
 }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
+  const [atividades, setAtividades] = useState<Atividade[]>([])
+  const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
 
   useEffect(() => {
     auxiliaryService
       .fetchPlanoContas()
       .then(setPlanoContas)
+      .catch(() => {})
+    auxiliaryService
+      .fetchAtividades()
+      .then(setAtividades)
+      .catch(() => {})
+    auxiliaryService
+      .fetchCentroCustos()
+      .then(setCentroCustos)
       .catch(() => {})
   }, [])
 
@@ -81,6 +94,8 @@ export function RazaoForm({
       plano_conta_id: '',
       lote: null,
       filial_id: '',
+      atividade_id: '',
+      centro_custo_id: '',
     },
   })
 
@@ -97,6 +112,12 @@ export function RazaoForm({
           : '',
         lote: editItem.lote ?? null,
         filial_id: editItem.filial_id ? String(editItem.filial_id) : '',
+        atividade_id: editItem.atividade_id
+          ? String(editItem.atividade_id)
+          : '',
+        centro_custo_id: editItem.centro_custo_id
+          ? String(editItem.centro_custo_id)
+          : '',
       })
     } else {
       form.reset({
@@ -108,6 +129,8 @@ export function RazaoForm({
         plano_conta_id: '',
         lote: null,
         filial_id: '',
+        atividade_id: '',
+        centro_custo_id: '',
       })
     }
   }, [editItem, form, open])
@@ -128,6 +151,10 @@ export function RazaoForm({
         plano_conta_id: Number(values.plano_conta_id),
         lote: values.lote || null,
         filial_id: values.filial_id ? Number(values.filial_id) : null,
+        atividade_id: values.atividade_id ? Number(values.atividade_id) : null,
+        centro_custo_id: values.centro_custo_id
+          ? Number(values.centro_custo_id)
+          : null,
       }
       if (editItem) {
         await updateRecord('razao', editItem.id, payload)

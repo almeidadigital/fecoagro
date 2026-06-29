@@ -47,7 +47,8 @@ import { SearchableFilter } from '@/components/SearchableFilter'
 import { PdfExportButton } from '@/components/PdfExportButton'
 import { ColumnVisibility } from '@/components/ColumnVisibility'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
-import { Razao, PlanoConta, Filial } from '@/lib/types'
+import { Razao, PlanoConta, Filial, Atividade, CentroCusto } from '@/lib/types'
+import { formatAtividade, formatCentroCusto } from '@/lib/relational-format'
 import { fetchWithFilters, deleteRecord } from '@/services/crudService'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import {
@@ -82,6 +83,8 @@ const razaoColumns = [
   { key: 'saldo', label: 'Saldo' },
   { key: 'lote', label: 'Lote' },
   { key: 'filial', label: 'Filial' },
+  { key: 'atividade', label: 'Atividade' },
+  { key: 'centro_custo', label: 'C. Custo' },
 ]
 
 const RazaoPage = () => {
@@ -94,6 +97,8 @@ const RazaoPage = () => {
   const [viewOpen, setViewOpen] = useState(false)
   const [planoContas, setPlanoContas] = useState<PlanoConta[]>([])
   const [filiais, setFiliais] = useState<Filial[]>([])
+  const [atividades, setAtividades] = useState<Atividade[]>([])
+  const [centroCustos, setCentroCustos] = useState<CentroCusto[]>([])
   const [filters, setFilters] = useState<RazaoFilters>({
     dateRange: undefined,
     conta: 'all',
@@ -159,6 +164,14 @@ const RazaoPage = () => {
       .fetchFiliais()
       .then(setFiliais)
       .catch(() => {})
+    auxiliaryService
+      .fetchAtividades()
+      .then(setAtividades)
+      .catch(() => {})
+    auxiliaryService
+      .fetchCentroCustos()
+      .then(setCentroCustos)
+      .catch(() => {})
   }, [])
 
   const hasActiveFilters =
@@ -205,6 +218,8 @@ const RazaoPage = () => {
       'Saldo',
       'Lote',
       'Filial',
+      'Atividade',
+      'Centro de Custo',
     ]
     const rows = data.map((item) => [
       formatDateBR(item.data),
@@ -215,6 +230,8 @@ const RazaoPage = () => {
       formatCurrencyNumber(item.saldo),
       item.lote ?? '',
       formatFilial(item.filial_id, filiais),
+      formatAtividade(item.atividade_id, atividades),
+      formatCentroCusto(item.centro_custo_id, centroCustos),
     ])
     exportToCsv(buildExportFilename('razao'), headers, rows)
     toast.success('CSV exportado com sucesso')
@@ -259,6 +276,8 @@ const RazaoPage = () => {
               { header: 'Crédito', key: 'credito' },
               { header: 'Saldo', key: 'saldo' },
               { header: 'Filial', key: 'filial' },
+              { header: 'Atividade', key: 'atividade' },
+              { header: 'Centro de Custo', key: 'centro_custo' },
             ]}
             data={data.map((item) => ({
               data: formatDateBR(item.data),
@@ -268,6 +287,11 @@ const RazaoPage = () => {
               credito: formatCurrencyNumber(item.credito),
               saldo: formatCurrencyNumber(item.saldo),
               filial: formatFilial(item.filial_id, filiais),
+              atividade: formatAtividade(item.atividade_id, atividades),
+              centro_custo: formatCentroCusto(
+                item.centro_custo_id,
+                centroCustos,
+              ),
             }))}
           />
           <Button variant="outline" onClick={handleExport}>
@@ -424,6 +448,10 @@ const RazaoPage = () => {
                     <TableHead className="w-[100px]">Lote</TableHead>
                   )}
                   {visibleColumns.filial && <TableHead>Filial</TableHead>}
+                  {visibleColumns.atividade && <TableHead>Atividade</TableHead>}
+                  {visibleColumns.centro_custo && (
+                    <TableHead>C. Custo</TableHead>
+                  )}
                   <TableHead className="w-[140px] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -468,6 +496,16 @@ const RazaoPage = () => {
                     {visibleColumns.filial && (
                       <TableCell className="text-gray-600 text-sm">
                         {formatFilial(item.filial_id, filiais)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.atividade && (
+                      <TableCell className="text-gray-600 text-sm">
+                        {formatAtividade(item.atividade_id, atividades)}
+                      </TableCell>
+                    )}
+                    {visibleColumns.centro_custo && (
+                      <TableCell className="text-gray-600 text-sm">
+                        {formatCentroCusto(item.centro_custo_id, centroCustos)}
                       </TableCell>
                     )}
                     <TableCell className="text-right">
