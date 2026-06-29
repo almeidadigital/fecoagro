@@ -333,6 +333,60 @@ export function RazaoForm({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="atividade_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Atividade</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma atividade..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {atividadeOptions(atividades).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="centro_custo_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Centro de Custos</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um centro de custos..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {centroCustoOptions(centroCustos).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <SheetFooter>
               <Button
                 type="submit"
