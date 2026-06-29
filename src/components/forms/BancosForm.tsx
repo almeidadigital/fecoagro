@@ -27,8 +27,6 @@ import { toast } from 'sonner'
 
 const schema = z.object({
   banco: z.string().min(2, 'Nome do banco é obrigatório'),
-  agencia: z.string().min(1, 'Agência é obrigatória'),
-  conta_corrente: z.string().min(1, 'Conta corrente é obrigatória'),
   saldo_atual: z.coerce.number(),
 })
 
@@ -46,8 +44,6 @@ export function BancosForm({ open, onOpenChange, editItem, onSuccess }: Props) {
     resolver: zodResolver(schema),
     defaultValues: {
       banco: '',
-      agencia: '',
-      conta_corrente: '',
       saldo_atual: 0,
     },
   })
@@ -56,15 +52,11 @@ export function BancosForm({ open, onOpenChange, editItem, onSuccess }: Props) {
     if (editItem) {
       form.reset({
         banco: editItem.banco,
-        agencia: editItem.agencia,
-        conta_corrente: editItem.conta_corrente,
         saldo_atual: editItem.saldo_atual,
       })
     } else {
       form.reset({
         banco: '',
-        agencia: '',
-        conta_corrente: '',
         saldo_atual: 0,
       })
     }
@@ -117,34 +109,6 @@ export function BancosForm({ open, onOpenChange, editItem, onSuccess }: Props) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="agencia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Agência</FormLabel>
-                    <FormControl>
-                      <Input placeholder="1234-5" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="conta_corrente"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Conta Corrente</FormLabel>
-                    <FormControl>
-                      <Input placeholder="67890-1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
             <FormField
               control={form.control}
               name="saldo_atual"

@@ -48,8 +48,6 @@ const formatCurrency = (v: number) =>
 
 const bancoColumns = [
   { key: 'banco', label: 'Banco' },
-  { key: 'agencia', label: 'Agência' },
-  { key: 'conta_corrente', label: 'Conta Corrente' },
   { key: 'saldo_atual', label: 'Saldo Atual' },
 ]
 
@@ -107,12 +105,10 @@ const BancosPage = () => {
       toast.error('Nenhum dado para exportar')
       return
     }
-    const headers = ['ID', 'Banco', 'Agência', 'Conta Corrente', 'Saldo Atual']
+    const headers = ['ID', 'Banco', 'Saldo Atual']
     const rows = filteredData.map((item) => [
       item.id,
       item.banco,
-      item.agencia,
-      item.conta_corrente,
       formatCurrencyNumber(item.saldo_atual),
     ])
     exportToCsv('bancos_data.csv', headers, rows)
@@ -146,15 +142,11 @@ const BancosPage = () => {
             columns={[
               { header: 'ID', key: 'id' },
               { header: 'Banco', key: 'banco' },
-              { header: 'Agência', key: 'agencia' },
-              { header: 'Conta Corrente', key: 'conta_corrente' },
               { header: 'Saldo Atual', key: 'saldo_atual' },
             ]}
             data={filteredData.map((item) => ({
               id: item.id,
               banco: item.banco,
-              agencia: item.agencia,
-              conta_corrente: item.conta_corrente,
               saldo_atual: formatCurrencyNumber(item.saldo_atual),
             }))}
           />
@@ -240,10 +232,6 @@ const BancosPage = () => {
                 <TableRow className="bg-gray-50/50">
                   <TableHead className="w-[100px]">ID</TableHead>
                   {visibleColumns.banco && <TableHead>Banco</TableHead>}
-                  {visibleColumns.agencia && <TableHead>Agência</TableHead>}
-                  {visibleColumns.conta_corrente && (
-                    <TableHead>Conta Corrente</TableHead>
-                  )}
                   {visibleColumns.saldo_atual && (
                     <TableHead className="text-right">Saldo Atual</TableHead>
                   )}
@@ -266,16 +254,6 @@ const BancosPage = () => {
                             {item.banco}
                           </span>
                         </div>
-                      </TableCell>
-                    )}
-                    {visibleColumns.agencia && (
-                      <TableCell className="text-gray-600 font-mono text-sm">
-                        {item.agencia}
-                      </TableCell>
-                    )}
-                    {visibleColumns.conta_corrente && (
-                      <TableCell className="text-gray-600 font-mono text-sm">
-                        {item.conta_corrente}
                       </TableCell>
                     )}
                     {visibleColumns.saldo_atual && (

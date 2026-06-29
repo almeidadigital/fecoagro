@@ -241,9 +241,6 @@ export default function Extratos() {
                     <h3 className="font-bold text-gray-900 truncate">
                       {banco.id} - {banco.banco}
                     </h3>
-                    <p className="text-xs text-gray-400 font-mono">
-                      Ag: {banco.agencia} | CC: {banco.conta_corrente}
-                    </p>
                   </div>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100">
@@ -275,10 +272,6 @@ export default function Extratos() {
               <div>
                 <p className="text-sm font-medium text-gray-600">
                   {selectedBanco.id} - {selectedBanco.banco}
-                </p>
-                <p className="text-xs text-gray-400">
-                  Ag: {selectedBanco.agencia} | CC:{' '}
-                  {selectedBanco.conta_corrente}
                 </p>
               </div>
               <div className="text-right">

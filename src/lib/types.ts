@@ -192,8 +192,6 @@ export interface Banco {
   id: number
   user_id: string
   banco: string
-  agencia: string
-  conta_corrente: string
   saldo_atual: number
   created_at?: string | null
   updated_at?: string | null

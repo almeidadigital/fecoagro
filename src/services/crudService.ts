@@ -79,8 +79,6 @@ const textColumns = [
   'descricao',
   'conta',
   'banco',
-  'agencia',
-  'conta_corrente',
   'fornecedor',
   'atividade',
   'centro_de_custos',
