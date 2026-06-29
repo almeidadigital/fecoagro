@@ -8,7 +8,60 @@ import {
 import { format } from 'date-fns'
 
 export const dashboardService = {
-  async getKPIs(dateNow?: string): Promise<DashboardKPIs> {
+  async getKPIs(dateNow?: string, filialId?: string): Promise<DashboardKPIs> {
+    if (filialId) {
+      let criticaQuery = supabase
+        .from('critica')
+        .select('amount, status, reconciled')
+        .eq('filial_id', filialId)
+      if (dateNow) criticaQuery = criticaQuery.lte('date', dateNow)
+
+      let razaoQuery = supabase
+        .from('razao')
+        .select('debito, credito')
+        .eq('filial_id', filialId)
+      if (dateNow) razaoQuery = razaoQuery.lte('data', dateNow)
+
+      const bancosQuery = supabase.from('bancos').select('saldo_atual')
+
+      const [criticaRes, razaoRes, bancosRes] = await Promise.all([
+        criticaQuery,
+        razaoQuery,
+        bancosQuery,
+      ])
+
+      const criticas = (criticaRes.data || []) as Array<{
+        amount: number
+        status: string
+        reconciled: boolean
+      }>
+      const razao = (razaoRes.data || []) as Array<{
+        debito: number
+        credito: number
+      }>
+      const bancos = (bancosRes.data || []) as Array<{
+        saldo_atual: number
+      }>
+
+      return {
+        totalCriticas: criticas.length,
+        pendingCriticas: criticas.filter((c) => c.status === 'pendente').length,
+        unreconciledCriticas: criticas.filter((c) => !c.reconciled).length,
+        completedCriticas: criticas.filter((c) => c.status === 'concluido')
+          .length,
+        totalCriticasAmount: criticas.reduce((s, c) => s + Number(c.amount), 0),
+        razaoBalance: razao.reduce(
+          (s, r) => s + Number(r.credito) - Number(r.debito),
+          0,
+        ),
+        bankBalance: bancos.reduce((s, b) => s + Number(b.saldo_atual), 0),
+        monthlyMovement: razao.reduce(
+          (s, r) => s + Number(r.debito) + Number(r.credito),
+          0,
+        ),
+      }
+    }
+
     const date = dateNow || format(new Date(), 'yyyy-MM-dd')
     const { data, error } = await supabase.rpc('get_dashboard_kpi', {
       p_date_now: date,
@@ -31,11 +84,13 @@ export const dashboardService = {
     limit = 6,
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<Transacao[]> {
     let query = supabase
       .from('critica')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('date', { ascending: false })
+    if (filialId) query = query.eq('filial_id', filialId)
     if (dateFrom && dateTo) {
       query = query
         .gte('date', format(dateFrom, 'yyyy-MM-dd'))
@@ -53,13 +108,15 @@ export const dashboardService = {
     limit = 500,
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<Transacao[]> {
     let query = supabase
       .from('critica')
       .select(
         'id, amount, status, centro_custo_id, atividade_id, plano_conta_id, date, reconciled',
       )
-      .order('created_at', { ascending: false })
+      .order('date', { ascending: false })
+    if (filialId) query = query.eq('filial_id', filialId)
     if (dateFrom && dateTo) {
       query = query
         .gte('date', format(dateFrom, 'yyyy-MM-dd'))
@@ -76,11 +133,13 @@ export const dashboardService = {
   async getRazaoEvolution(
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<RazaoEvolutionPoint[]> {
     let query = supabase
       .from('razao')
       .select('data, debito, credito, saldo')
       .order('data', { ascending: true })
+    if (filialId) query = query.eq('filial_id', filialId)
     if (dateFrom && dateTo) {
       query = query
         .gte('data', format(dateFrom, 'yyyy-MM-dd'))
@@ -112,8 +171,10 @@ export const dashboardService = {
   async getDebitCreditTotals(
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<DebitCreditTotals> {
     let query = supabase.from('razao').select('debito, credito')
+    if (filialId) query = query.eq('filial_id', filialId)
     if (dateFrom && dateTo) {
       query = query
         .gte('data', format(dateFrom, 'yyyy-MM-dd'))

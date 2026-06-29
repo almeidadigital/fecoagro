@@ -6,11 +6,14 @@ export function formatFilial(
 ): string {
   if (!id) return '-'
   const item = list.find((f) => f.id === id)
-  return item ? item.filial : String(id)
+  return item ? `${item.id} - ${item.filial}` : String(id)
 }
 
 export function filialOptions(
   list: Filial[],
 ): { value: string; label: string }[] {
-  return list.map((f) => ({ value: String(f.id), label: f.filial }))
+  return list.map((f) => ({
+    value: String(f.id),
+    label: `${f.id} - ${f.filial}`,
+  }))
 }

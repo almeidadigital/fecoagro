@@ -78,7 +78,7 @@ interface DateRange {
   to: Date
 }
 
-export const useDashboard = (dateRange?: DateRange) => {
+export const useDashboard = (dateRange?: DateRange, filialId?: string) => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null)
   const [recentTransactions, setRecentTransactions] = useState<Transacao[]>([])
   const [razaoEvolution, setRazaoEvolution] = useState<RazaoEvolutionPoint[]>(
@@ -136,6 +136,8 @@ export const useDashboard = (dateRange?: DateRange) => {
       setLoading(true)
       const dr = dateRange
       const kpiDate = dr ? format(dr.to, 'yyyy-MM-dd') : undefined
+      const effectiveFilialId =
+        filialId && filialId !== 'all' ? filialId : undefined
       const [
         kpiData,
         recentData,
@@ -148,11 +150,25 @@ export const useDashboard = (dateRange?: DateRange) => {
         atividades,
         planoContas,
       ] = await Promise.all([
-        dashboardService.getKPIs(kpiDate),
-        dashboardService.getRecentTransactions(6, dr?.from, dr?.to),
-        dashboardService.getCriticaForDistributions(500, dr?.from, dr?.to),
-        dashboardService.getRazaoEvolution(dr?.from, dr?.to),
-        dashboardService.getDebitCreditTotals(dr?.from, dr?.to),
+        dashboardService.getKPIs(kpiDate, effectiveFilialId),
+        dashboardService.getRecentTransactions(
+          6,
+          dr?.from,
+          dr?.to,
+          effectiveFilialId,
+        ),
+        dashboardService.getCriticaForDistributions(
+          500,
+          dr?.from,
+          dr?.to,
+          effectiveFilialId,
+        ),
+        dashboardService.getRazaoEvolution(dr?.from, dr?.to, effectiveFilialId),
+        dashboardService.getDebitCreditTotals(
+          dr?.from,
+          dr?.to,
+          effectiveFilialId,
+        ),
         dashboardService.getRecentExtratos(6, dr?.from, dr?.to),
         summaryService.getSummary(),
         auxiliaryService.fetchCentroCustos(),
@@ -197,7 +213,7 @@ export const useDashboard = (dateRange?: DateRange) => {
       setLoading(false)
       setSummaryLoading(false)
     }
-  }, [role, dateRange?.from?.getTime(), dateRange?.to?.getTime()])
+  }, [role, dateRange?.from?.getTime(), dateRange?.to?.getTime(), filialId])
 
   useEffect(() => {
     fetchData()

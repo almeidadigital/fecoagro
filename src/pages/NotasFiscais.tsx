@@ -138,7 +138,7 @@ const NotasFiscais = () => {
         dateFrom: dateRange?.from,
         dateTo: dateRange?.to,
       })
-      setData(result)
+      setData([...result].sort((a, b) => b.numero_nota - a.numero_nota))
     } catch {
       toast.error('Erro ao carregar notas fiscais')
     } finally {
@@ -364,7 +364,7 @@ const NotasFiscais = () => {
               <SelectItem value="all">Todas</SelectItem>
               {filiais.map((f) => (
                 <SelectItem key={f.id} value={String(f.id)}>
-                  {f.filial}
+                  {f.id} - {f.filial}
                 </SelectItem>
               ))}
             </SelectContent>

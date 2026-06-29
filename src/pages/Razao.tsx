@@ -57,7 +57,7 @@ import {
   formatCurrencyNumber,
   formatDateBR,
 } from '@/lib/export'
-import { formatFilial } from '@/lib/filial-format'
+import { formatFilial, filialOptions } from '@/lib/filial-format'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -142,6 +142,9 @@ const RazaoPage = () => {
           (r) => r.debito <= maxVal || r.credito <= maxVal,
         )
       }
+      filtered = [...filtered].sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
+      )
       setData(filtered)
     } catch {
       toast.error('Erro ao carregar lançamentos')
@@ -237,15 +240,18 @@ const RazaoPage = () => {
     toast.success('CSV exportado com sucesso')
   }
 
-  const contaOptions = planoContas.map((p) => ({
-    value: String(p.id),
-    label: `${p.id} - ${p.descricao}`,
-  }))
+  const contaOptions = [...planoContas]
+    .sort((a, b) =>
+      (a.classificacao ?? '').localeCompare(b.classificacao ?? '', undefined, {
+        numeric: true,
+      }),
+    )
+    .map((p) => ({
+      value: String(p.id),
+      label: `${p.id} - ${p.descricao}`,
+    }))
 
-  const filialOptionsList = filiais.map((f) => ({
-    value: String(f.id),
-    label: f.filial,
-  }))
+  const filialOptionsList = filialOptions(filiais)
 
   const getContaLabel = (planoContaId: number | null | undefined) => {
     if (!planoContaId) return '-'

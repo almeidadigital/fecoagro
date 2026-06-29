@@ -27,21 +27,28 @@ export interface SupplierVolumeData {
 }
 
 export const executiveDashboardService = {
-  async getKPIs(dateFrom?: Date, dateTo?: Date): Promise<ExecutiveKPIs> {
+  async getKPIs(
+    dateFrom?: Date,
+    dateTo?: Date,
+    filialId?: string,
+  ): Promise<ExecutiveKPIs> {
     const fromStr = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : undefined
     const toStr = dateTo ? format(dateTo, 'yyyy-MM-dd') : undefined
 
     let notasQuery = supabase.from('notas_fiscais').select('valor_total')
     if (fromStr) notasQuery = notasQuery.gte('data_emissao', fromStr)
     if (toStr) notasQuery = notasQuery.lte('data_emissao', toStr)
+    if (filialId) notasQuery = notasQuery.eq('filial_id', filialId)
 
     let criticasQuery = supabase.from('critica').select('amount')
     if (fromStr) criticasQuery = criticasQuery.gte('date', fromStr)
     if (toStr) criticasQuery = criticasQuery.lte('date', toStr)
+    if (filialId) criticasQuery = criticasQuery.eq('filial_id', filialId)
 
     let razaoQuery = supabase.from('razao').select('debito, credito')
     if (fromStr) razaoQuery = razaoQuery.gte('data', fromStr)
     if (toStr) razaoQuery = razaoQuery.lte('data', toStr)
+    if (filialId) razaoQuery = razaoQuery.eq('filial_id', filialId)
 
     const bancosQuery = supabase.from('bancos').select('saldo_atual')
 
@@ -76,6 +83,7 @@ export const executiveDashboardService = {
   async getMonthlyNotas(
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<MonthlyNotaData[]> {
     const fromStr = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : undefined
     const toStr = dateTo ? format(dateTo, 'yyyy-MM-dd') : undefined
@@ -86,6 +94,7 @@ export const executiveDashboardService = {
       .order('data_emissao', { ascending: true })
     if (fromStr) query = query.gte('data_emissao', fromStr)
     if (toStr) query = query.lte('data_emissao', toStr)
+    if (filialId) query = query.eq('filial_id', filialId)
 
     const { data, error } = await query
     if (error) throw error
@@ -127,6 +136,7 @@ export const executiveDashboardService = {
   async getSupplierVolumes(
     dateFrom?: Date,
     dateTo?: Date,
+    filialId?: string,
   ): Promise<SupplierVolumeData[]> {
     const fromStr = dateFrom ? format(dateFrom, 'yyyy-MM-dd') : undefined
     const toStr = dateTo ? format(dateTo, 'yyyy-MM-dd') : undefined
@@ -134,6 +144,7 @@ export const executiveDashboardService = {
     let query = supabase.from('notas_fiscais').select('fornecedor, valor_total')
     if (fromStr) query = query.gte('data_emissao', fromStr)
     if (toStr) query = query.lte('data_emissao', toStr)
+    if (filialId) query = query.eq('filial_id', filialId)
 
     const { data, error } = await query
     if (error) throw error
@@ -146,7 +157,10 @@ export const executiveDashboardService = {
 
     for (const row of data || []) {
       const fornecedor = row.fornecedor || 'Sem Fornecedor'
-      const existing = supplierMap.get(fornecedor) || { total: 0, count: 0 }
+      const existing = supplierMap.get(fornecedor) || {
+        total: 0,
+        count: 0,
+      }
       existing.total += Number(row.valor_total)
       existing.count += 1
       supplierMap.set(fornecedor, existing)

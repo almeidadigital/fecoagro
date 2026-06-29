@@ -20,27 +20,26 @@ import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChartContainer } from '@/components/ui/chart'
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import {
   executiveDashboardService,
   ExecutiveKPIs,
-  MonthlyNotaData,
   SupplierVolumeData,
 } from '@/services/executiveDashboardService'
+import { auxiliaryService } from '@/services/auxiliaryService'
 import { SupplierRanking } from '@/components/dashboard/SupplierRanking'
 import { SupplierVolumeList } from '@/components/dashboard/SupplierVolumeList'
 import { toast } from 'sonner'
+import { Filial } from '@/lib/types'
+import { filialOptions } from '@/lib/filial-format'
 
 const DashboardExecutivo = () => {
   const now = new Date()
@@ -48,13 +47,23 @@ const DashboardExecutivo = () => {
     from: new Date(now.getFullYear(), now.getMonth(), 1),
     to: now,
   })
+  const [filialId, setFilialId] = useState<string>('all')
+  const [filiais, setFiliais] = useState<Filial[]>([])
   const [kpis, setKpis] = useState<ExecutiveKPIs | null>(null)
-  const [monthlyData, setMonthlyData] = useState<MonthlyNotaData[]>([])
   const [supplierData, setSupplierData] = useState<SupplierVolumeData[]>([])
   const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    auxiliaryService
+      .fetchFiliais()
+      .then(setFiliais)
+      .catch(() => {})
+  }, [])
+
   const loadData = useCallback(async () => {
     setLoading(true)
+
+    const effectiveFilialId = filialId !== 'all' ? filialId : undefined
 
     const safeFetch = async <T,>(
       fn: () => Promise<T>,
@@ -70,26 +79,23 @@ const DashboardExecutivo = () => {
       }
     }
 
-    const [kpiData, monthly, suppliers] = await Promise.all([
-      safeFetch(
-        () => executiveDashboardService.getKPIs(dateRange?.from, dateRange?.to),
-        null,
-        'KPIs',
-      ),
+    const [kpiData, suppliers] = await Promise.all([
       safeFetch(
         () =>
-          executiveDashboardService.getMonthlyNotas(
+          executiveDashboardService.getKPIs(
             dateRange?.from,
             dateRange?.to,
+            effectiveFilialId,
           ),
-        [],
-        'Notas Mensais',
+        null,
+        'KPIs',
       ),
       safeFetch(
         () =>
           executiveDashboardService.getSupplierVolumes(
             dateRange?.from,
             dateRange?.to,
+            effectiveFilialId,
           ),
         [],
         'Fornecedores',
@@ -97,10 +103,9 @@ const DashboardExecutivo = () => {
     ])
 
     setKpis(kpiData)
-    setMonthlyData(monthly)
     setSupplierData(suppliers)
     setLoading(false)
-  }, [dateRange?.from?.getTime(), dateRange?.to?.getTime()])
+  }, [dateRange?.from?.getTime(), dateRange?.to?.getTime(), filialId])
 
   useEffect(() => {
     loadData()
@@ -111,13 +116,10 @@ const DashboardExecutivo = () => {
       from: new Date(now.getFullYear(), now.getMonth(), 1),
       to: now,
     })
+    setFilialId('all')
   }
 
-  const hasActiveFilters = dateRange !== undefined
-
-  const chartConfig = {
-    total: { label: 'Total Notas', color: 'hsl(var(--primary))' },
-  }
+  const hasActiveFilters = dateRange !== undefined || filialId !== 'all'
 
   const cards = useMemo(() => {
     if (!kpis) return []
@@ -168,7 +170,6 @@ const DashboardExecutivo = () => {
             <Skeleton key={i} className="h-[130px] rounded-3xl" />
           ))}
         </div>
-        <Skeleton className="h-[400px] rounded-3xl" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-[400px] rounded-3xl" />
           <Skeleton className="h-[400px] rounded-3xl" />
@@ -188,7 +189,20 @@ const DashboardExecutivo = () => {
             Visão executiva dos totais financeiros
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={filialId} onValueChange={setFilialId}>
+            <SelectTrigger className="w-full md:w-[220px] bg-white">
+              <SelectValue placeholder="Todas as Filiais" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Filiais</SelectItem>
+              {filialOptions(filiais).map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -266,52 +280,6 @@ const DashboardExecutivo = () => {
           )
         })}
       </div>
-
-      <Card className="rounded-3xl border-none shadow-sm">
-        <CardContent className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Notas Fiscais por Mês
-          </h3>
-          {monthlyData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={12}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={12}
-                    tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    }}
-                  />
-                  <Bar
-                    dataKey="total"
-                    fill="hsl(var(--primary))"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[350px] text-gray-400 text-sm">
-              Nenhum dado disponível para o período selecionado.
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SupplierVolumeList data={supplierData} loading={loading} />

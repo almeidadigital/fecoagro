@@ -59,7 +59,12 @@ export function centroCustoOptions(
 export function planoContaOptions(
   list: PlanoConta[],
 ): { value: string; label: string }[] {
-  return list.map((p) => ({
+  const sorted = [...list].sort((a, b) =>
+    (a.classificacao ?? '').localeCompare(b.classificacao ?? '', undefined, {
+      numeric: true,
+    }),
+  )
+  return sorted.map((p) => ({
     value: String(p.id),
     label: `${p.id} - ${p.descricao || p.classificacao || 'Sem descrição'}`,
   }))
