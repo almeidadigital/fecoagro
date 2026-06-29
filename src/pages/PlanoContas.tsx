@@ -54,6 +54,9 @@ const PlanoContasPage = () => {
   const [formOpen, setFormOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [editItem, setEditItem] = useState<PlanoConta | null>(null)
+  const [tipoFilter, setTipoFilter] = useState<
+    'all' | 'analitica' | 'sintetica'
+  >('all')
   const [filters, setFilters] = useState<ComboboxFilterState>({
     column: '',
     value: '',
@@ -64,17 +67,28 @@ const PlanoContasPage = () => {
     planoColumns.map((c) => c.key),
   )
 
-  const filteredData = data.filter((p) => {
-    if (!filters.column || !filters.value) return true
-    const fieldValue = String(p[filters.column as keyof PlanoConta] ?? '')
-    return fieldValue.toLowerCase().includes(filters.value.toLowerCase())
-  })
+  const filteredData = data
+    .filter((p) => {
+      if (!filters.column || !filters.value) return true
+      const fieldValue = String(p[filters.column as keyof PlanoConta] ?? '')
+      return fieldValue.toLowerCase().includes(filters.value.toLowerCase())
+    })
+    .filter((p) => tipoFilter === 'all' || p.tipo === tipoFilter)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const result = await fetchAll<PlanoConta>('plano_contas')
-      setData(result)
+      const sorted = [...result].sort((a, b) =>
+        (a.classificacao ?? '').localeCompare(
+          b.classificacao ?? '',
+          undefined,
+          {
+            numeric: true,
+          },
+        ),
+      )
+      setData(sorted)
     } catch {
       toast.error('Erro ao carregar plano de contas')
     } finally {
@@ -164,6 +178,26 @@ const PlanoContasPage = () => {
             setFilters={setFilters}
             showDateRange={false}
           />
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-500">Tipo:</span>
+            {(['all', 'analitica', 'sintetica'] as const).map((t) => (
+              <Button
+                key={t}
+                variant={tipoFilter === t ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTipoFilter(t)}
+              >
+                {t === 'all'
+                  ? 'Todos'
+                  : t === 'analitica'
+                    ? 'Analítica'
+                    : 'Sintética'}
+              </Button>
+            ))}
+            <Badge variant="secondary" className="ml-2">
+              {filteredData.length} contas
+            </Badge>
+          </div>
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             <div className="overflow-auto">
               <Table>
@@ -190,14 +224,37 @@ const PlanoContasPage = () => {
                       </TableCell>
                       {visibleColumns.classificacao && (
                         <TableCell className="font-mono text-gray-600">
-                          {item.classificacao}
+                          <span
+                            style={{
+                              paddingLeft: `${Math.max(0, (item.classificacao?.split('.').length ?? 1) - 1) * 16}px`,
+                            }}
+                            className={
+                              (item.classificacao?.split('.').length ?? 1) === 1
+                                ? 'font-bold uppercase'
+                                : ''
+                            }
+                          >
+                            {item.classificacao}
+                          </span>
                         </TableCell>
                       )}
                       {visibleColumns.descricao && (
-                        <TableCell className="font-semibold text-gray-900">
-                          {item.descricao}
+                        <TableCell
+                          className={
+                            (item.classificacao?.split('.').length ?? 1) === 1
+                              ? 'font-bold uppercase text-gray-900'
+                              : 'font-semibold text-gray-900'
+                          }
+                        >
+                          <span
+                            style={{
+                              paddingLeft: `${Math.max(0, (item.classificacao?.split('.').length ?? 1) - 1) * 16}px`,
+                            }}
+                          >
+                            {item.descricao}
+                          </span>
                         </TableCell>
-                      )}
+                      )}{' '}
                       {visibleColumns.tipo && (
                         <TableCell>
                           <Badge
