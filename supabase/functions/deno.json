@@ -2,7 +2,7 @@
   "_versions": {
     "chat-agent": 5,
     "welcome-email": 4,
-    "process-pdf": 5,
+    "process-pdf": 6,
     "generate-pdf": 2
   }
 }

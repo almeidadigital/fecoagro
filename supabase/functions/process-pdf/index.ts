@@ -149,18 +149,59 @@ function parseAtividades(text: string, userId: string) {
   return records
 }
 
-function parsePlanoContas(text: string, userId: string) {
+function parsePlanoContas(
+  text: string,
+  userId: string,
+  startSyntheticId: number = 9000000,
+) {
   const records: any[] = []
-  const contaPattern = /(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,3})\s+(.+)/g
-  let match
-  while ((match = contaPattern.exec(text)) !== null && records.length < 20) {
-    records.push({
-      user_id: userId,
-      classificacao: match[1],
-      descricao: match[2].trim().substring(0, 100),
-      tipo: 'analitica',
-    })
+  const lines = text.split('\n')
+
+  let syntheticIdCounter = startSyntheticId
+  const seenIds = new Set<number>()
+  const seenClass = new Set<string>()
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    if (
+      trimmed.includes('FEDERACAO COOPER') ||
+      trimmed.includes('Plano de Contas') ||
+      (trimmed.includes('Conta') && trimmed.includes('Reduzido')) ||
+      trimmed.startsWith('---')
+    ) {
+      continue
+    }
+
+    const match = trimmed.match(
+      /^(\d+(?:\.\d+)*)\s+(?:([DC])\s+(\d+)\s+)?(.+)$/,
+    )
+    if (match) {
+      const classificacao = match[1]
+      const reduzido = match[3]
+      let descricao = match[4].trim()
+      descricao = descricao.replace(/\s+\d+\s+\d+\s+\d+$/, '').trim()
+
+      if (!descricao) continue
+
+      const tipo = reduzido ? 'analitica' : 'sintetica'
+      const id = reduzido ? parseInt(reduzido, 10) : syntheticIdCounter++
+
+      if (seenIds.has(id) || seenClass.has(classificacao)) continue
+      seenIds.add(id)
+      seenClass.add(classificacao)
+
+      records.push({
+        id,
+        user_id: userId,
+        classificacao,
+        descricao: descricao.substring(0, 255),
+        tipo,
+      })
+    }
   }
+
   return records
 }
 
@@ -268,9 +309,36 @@ Deno.serve(async (req) => {
       case 'atividades':
         records = parseAtividades(extractedText, user.id)
         break
-      case 'plano_contas':
-        records = parsePlanoContas(extractedText, user.id)
+      case 'plano_contas': {
+        const { data: existingDb } = await adminClient
+          .from('plano_contas')
+          .select('id, classificacao')
+          .eq('user_id', user.id)
+
+        const existingIds = new Set(existingDb?.map((r: any) => r.id) || [])
+        const existingClass = new Set(
+          existingDb?.map((r: any) => r.classificacao) || [],
+        )
+
+        let maxSyntheticId = 9000000
+        if (existingDb) {
+          for (const r of existingDb) {
+            if (r.id >= 9000000)
+              maxSyntheticId = Math.max(maxSyntheticId, r.id + 1)
+          }
+        }
+
+        const parsedRecords = parsePlanoContas(
+          extractedText,
+          user.id,
+          maxSyntheticId,
+        )
+        records = parsedRecords.filter(
+          (r: any) =>
+            !existingIds.has(r.id) && !existingClass.has(r.classificacao),
+        )
         break
+      }
       default:
         return new Response(JSON.stringify({ error: 'Unknown entity type' }), {
           status: 400,
@@ -291,29 +359,35 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { data: inserted, error: insertError } = await adminClient
-      .from(tableName)
-      .insert(records)
-      .select()
+    let insertedCount = 0
+    const chunkSize = 500
+    for (let i = 0; i < records.length; i += chunkSize) {
+      const chunk = records.slice(i, i + chunkSize)
+      const { data: inserted, error: insertError } = await adminClient
+        .from(tableName)
+        .insert(chunk)
+        .select()
 
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to insert records',
-          detail: insertError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        return new Response(
+          JSON.stringify({
+            error: 'Failed to insert records',
+            detail: insertError.message,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
+      insertedCount += inserted?.length || 0
     }
 
     return new Response(
       JSON.stringify({
         message: 'PDF processed successfully',
-        recordsInserted: inserted?.length || 0,
+        recordsInserted: insertedCount,
         entityType,
       }),
       {
