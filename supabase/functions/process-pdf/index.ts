@@ -149,59 +149,51 @@ function parseAtividades(text: string, userId: string) {
   return records
 }
 
-function parsePlanoContas(
-  text: string,
-  userId: string,
-  startSyntheticId: number = 9000000,
-) {
+function parsePlanoContas(text: string, userId: string, startSyntheticId: number = 9000000) {
   const records: any[] = []
   const lines = text.split('\n')
-
-  let syntheticIdCounter = startSyntheticId
+  
+  let syntheticIdCounter = startSyntheticId;
   const seenIds = new Set<number>()
   const seenClass = new Set<string>()
-
+  
   for (const line of lines) {
     const trimmed = line.trim()
-    if (!trimmed) continue
-
-    if (
-      trimmed.includes('FEDERACAO COOPER') ||
-      trimmed.includes('Plano de Contas') ||
-      (trimmed.includes('Conta') && trimmed.includes('Reduzido')) ||
-      trimmed.startsWith('---')
-    ) {
-      continue
+    if (!trimmed) continue;
+    
+    if (trimmed.includes('FEDERACAO COOPER') || 
+        trimmed.includes('Plano de Contas') ||
+        (trimmed.includes('Conta') && trimmed.includes('Reduzido')) ||
+        trimmed.startsWith('---')) {
+      continue;
     }
-
-    const match = trimmed.match(
-      /^(\d+(?:\.\d+)*)\s+(?:([DC])\s+(\d+)\s+)?(.+)$/,
-    )
+    
+    const match = trimmed.match(/^(\d+(?:\.\d+)*)\s+(?:([DC])\s+(\d+)\s+)?(.+)$/);
     if (match) {
-      const classificacao = match[1]
-      const reduzido = match[3]
-      let descricao = match[4].trim()
-      descricao = descricao.replace(/\s+\d+\s+\d+\s+\d+$/, '').trim()
+      const classificacao = match[1];
+      const reduzido = match[3];
+      let descricao = match[4].trim();
+      descricao = descricao.replace(/\s+\d+\s+\d+\s+\d+$/, '').trim();
+      
+      if (!descricao) continue;
 
-      if (!descricao) continue
-
-      const tipo = reduzido ? 'analitica' : 'sintetica'
-      const id = reduzido ? parseInt(reduzido, 10) : syntheticIdCounter++
-
-      if (seenIds.has(id) || seenClass.has(classificacao)) continue
+      const tipo = reduzido ? 'analitica' : 'sintetica';
+      const id = reduzido ? parseInt(reduzido, 10) : syntheticIdCounter++;
+      
+      if (seenIds.has(id) || seenClass.has(classificacao)) continue;
       seenIds.add(id)
       seenClass.add(classificacao)
-
+      
       records.push({
         id,
         user_id: userId,
         classificacao,
         descricao: descricao.substring(0, 255),
         tipo,
-      })
+      });
     }
   }
-
+  
   return records
 }
 
@@ -316,27 +308,17 @@ Deno.serve(async (req) => {
           .eq('user_id', user.id)
 
         const existingIds = new Set(existingDb?.map((r: any) => r.id) || [])
-        const existingClass = new Set(
-          existingDb?.map((r: any) => r.classificacao) || [],
-        )
+        const existingClass = new Set(existingDb?.map((r: any) => r.classificacao) || [])
 
         let maxSyntheticId = 9000000
         if (existingDb) {
           for (const r of existingDb) {
-            if (r.id >= 9000000)
-              maxSyntheticId = Math.max(maxSyntheticId, r.id + 1)
+            if (r.id >= 9000000) maxSyntheticId = Math.max(maxSyntheticId, r.id + 1)
           }
         }
 
-        const parsedRecords = parsePlanoContas(
-          extractedText,
-          user.id,
-          maxSyntheticId,
-        )
-        records = parsedRecords.filter(
-          (r: any) =>
-            !existingIds.has(r.id) && !existingClass.has(r.classificacao),
-        )
+        const parsedRecords = parsePlanoContas(extractedText, user.id, maxSyntheticId)
+        records = parsedRecords.filter((r: any) => !existingIds.has(r.id) && !existingClass.has(r.classificacao))
         break
       }
       default:
@@ -359,10 +341,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    let insertedCount = 0
-    const chunkSize = 500
+    let insertedCount = 0;
+    const chunkSize = 500;
     for (let i = 0; i < records.length; i += chunkSize) {
-      const chunk = records.slice(i, i + chunkSize)
+      const chunk = records.slice(i, i + chunkSize);
       const { data: inserted, error: insertError } = await adminClient
         .from(tableName)
         .insert(chunk)
@@ -381,7 +363,7 @@ Deno.serve(async (req) => {
           },
         )
       }
-      insertedCount += inserted?.length || 0
+      insertedCount += inserted?.length || 0;
     }
 
     return new Response(
