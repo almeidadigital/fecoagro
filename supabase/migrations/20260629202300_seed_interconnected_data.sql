@@ -44,11 +44,11 @@ BEGIN
 
   -- Ensure plano_contas for receita and despesa
   INSERT INTO public.plano_contas (classificacao, descricao, tipo, user_id)
-  SELECT '3.1.01', 'Receitas de Vendas', 'analitica', v_user_id
+  SELECT '3.1.01', 'Receitas de Vendas', 'Analitica', v_user_id
   WHERE NOT EXISTS (SELECT 1 FROM public.plano_contas WHERE user_id = v_user_id AND classificacao = '3.1.01');
 
   INSERT INTO public.plano_contas (classificacao, descricao, tipo, user_id)
-  SELECT '4.1.01', 'Despesas Operacionais', 'analitica', v_user_id
+  SELECT '4.1.01', 'Despesas Operacionais', 'Analitica', v_user_id
   WHERE NOT EXISTS (SELECT 1 FROM public.plano_contas WHERE user_id = v_user_id AND classificacao = '4.1.01');
 
   SELECT id INTO v_plano_receita_id FROM public.plano_contas WHERE user_id = v_user_id AND classificacao = '3.1.01' LIMIT 1;
