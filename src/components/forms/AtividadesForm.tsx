@@ -26,6 +26,11 @@ import { createRecord, updateRecord } from '@/services/crudService'
 import { toast } from 'sonner'
 
 const schema = z.object({
+  id: z.coerce
+    .number({ invalid_type_error: 'ID deve ser um número' })
+    .int('ID deve ser um número inteiro')
+    .positive('ID deve ser positivo')
+    .min(1, 'ID é obrigatório'),
   atividade: z.string().min(2, 'Nome da atividade é obrigatório'),
 })
 
@@ -46,18 +51,22 @@ export function AtividadesForm({
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { atividade: '' },
+    defaultValues: { id: 0, atividade: '' },
   })
 
   useEffect(() => {
-    form.reset({ atividade: editItem?.atividade || '' })
+    form.reset({
+      id: editItem?.id ?? 0,
+      atividade: editItem?.atividade || '',
+    })
   }, [editItem, form, open])
 
   async function onSubmit(values: z.infer<typeof schema>) {
     try {
       setSubmitting(true)
       if (editItem) {
-        await updateRecord('atividades', editItem.id, values)
+        const { id: _id, ...updates } = values
+        await updateRecord('atividades', editItem.id, updates)
         toast.success('Atividade atualizada')
       } else {
         await createRecord('atividades', values)
@@ -87,6 +96,30 @@ export function AtividadesForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ID</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 501"
+                      disabled={!!editItem}
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value === '' ? 0 : Number(e.target.value),
+                        )
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="atividade"
               render={({ field }) => (
                 <FormItem>
@@ -97,7 +130,7 @@ export function AtividadesForm({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            />{' '}
             <SheetFooter>
               <Button
                 type="submit"
