@@ -37,6 +37,88 @@ async function extractPdfText(data: Uint8Array): Promise<string> {
   return fullText
 }
 
+async function extractExtratosWithAI(
+  text: string,
+  userId: string,
+  bancoId: number,
+): Promise<any[]> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (apiKey) {
+    try {
+      const systemPrompt =
+        'You are a financial data extraction expert. Extract bank statement entries from the text. Return a JSON array. Each item: {"data":"YYYY-MM-DD","descricao":"text","valor":number,"tipo":"credit" or "debit"}. Return only JSON, no markdown.'
+      const userPrompt = text.substring(0, 12000)
+      const response = await fetch(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.1,
+          }),
+        },
+      )
+      if (response.ok) {
+        const data = await response.json()
+        const content = data.choices?.[0]?.message?.content || ''
+        const cleaned = content
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim()
+        const parsed = JSON.parse(cleaned)
+        if (Array.isArray(parsed)) {
+          return parsed.map((r: any) => ({
+            user_id: userId,
+            banco_id: bancoId,
+            data: r.data,
+            descricao: String(r.descricao || '').substring(0, 500),
+            valor: Number(r.valor) || 0,
+            tipo: r.tipo === 'credit' ? 'credit' : 'debit',
+          }))
+        }
+      }
+    } catch (e) {
+      console.error('AI extraction failed, falling back to regex:', e)
+    }
+  }
+  const records: any[] = []
+  const lines = text.split('\n')
+  const dateRe = /(\d{2})\/(\d{2})\/(\d{4})/
+  const valueRe = /-?[\d.]+,\d{2}/g
+  for (const line of lines) {
+    const dm = line.match(dateRe)
+    if (!dm) continue
+    const data = `${dm[3]}-${dm[2]}-${dm[1]}`
+    const nums = [...line.matchAll(valueRe)]
+    if (nums.length === 0) continue
+    const valorStr = nums[nums.length - 1][0]
+    const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'))
+    const descricao = line
+      .replace(dateRe, '')
+      .replace(valueRe, '')
+      .trim()
+      .substring(0, 500)
+    if (!descricao || valor === 0) continue
+    records.push({
+      user_id: userId,
+      banco_id: bancoId,
+      data,
+      descricao,
+      valor: Math.abs(valor),
+      tipo: valor < 0 ? 'debit' : 'credit',
+    })
+  }
+  return records
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -71,7 +153,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { filePath, entityType } = await req.json()
+    const { filePath, entityType, bancoId } = await req.json()
     if (!filePath || !entityType) {
       return new Response(
         JSON.stringify({ error: 'filePath and entityType are required' }),
@@ -166,6 +248,21 @@ Deno.serve(async (req) => {
       case 'bancos':
         records = parseBancos(extractedText, user.id)
         break
+      case 'extratos_bancarios': {
+        if (!bancoId) {
+          return new Response(
+            JSON.stringify({
+              error: 'bancoId is required for extratos_bancarios import',
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          )
+        }
+        records = await extractExtratosWithAI(extractedText, user.id, bancoId)
+        break
+      }
       case 'critica':
       case 'transactions':
         records = parseCritica(extractedText, user.id)

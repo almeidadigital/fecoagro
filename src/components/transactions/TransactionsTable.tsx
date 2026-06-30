@@ -1,4 +1,4 @@
-import { Edit, Eye, Trash2 } from 'lucide-react'
+import { Edit, Eye, Trash2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -143,16 +143,27 @@ export function TransactionsTable({
                 )}
                 {visibleColumns.reconciled && (
                   <TableCell className="text-center">
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        item.reconciled
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-amber-100 text-amber-700',
-                      )}
-                    >
-                      {item.reconciled ? 'Sim' : 'Não'}
-                    </Badge>
+                    <div className="flex flex-col items-center gap-1">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          item.reconciled
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700',
+                        )}
+                      >
+                        {item.reconciled ? 'Sim' : 'Não'}
+                      </Badge>
+                      {item.ai_confidence != null &&
+                        item.ai_confidence >= 0.9 && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-purple-100 text-purple-700"
+                          >
+                            <Sparkles className="w-3 h-3 mr-1" /> IA
+                          </Badge>
+                        )}
+                    </div>
                   </TableCell>
                 )}
                 <TableCell className="text-right">

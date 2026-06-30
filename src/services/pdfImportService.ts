@@ -8,6 +8,7 @@ export type EntityType =
   | 'centro_custos'
   | 'atividades'
   | 'plano_contas'
+  | 'extratos_bancarios'
 
 export async function uploadPdf(
   file: File,
@@ -35,13 +36,14 @@ export async function uploadPdf(
 export async function processPdf(
   filePath: string,
   entityType: EntityType,
+  bancoId?: number,
 ): Promise<{
   message: string
   recordsInserted: number
   entityType: string
 }> {
   const { data, error } = await supabase.functions.invoke('process-pdf', {
-    body: { filePath, entityType },
+    body: { filePath, entityType, bancoId },
   })
 
   if (error) throw error

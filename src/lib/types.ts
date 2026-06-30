@@ -36,6 +36,9 @@ export interface Transacao {
   nota_fiscal_id: number | null
   filial_id: number | null
   reconciled: boolean
+  ai_confidence?: number | null
+  ai_reasoning?: string | null
+  ai_reconciliation_id?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -50,6 +53,10 @@ export interface ExtratoBancario {
   banco_id: number
   razao_id?: number | null
   reconciled?: boolean
+  ai_confidence?: number | null
+  ai_reasoning?: string | null
+  ai_reconciliation_id?: string | null
+  ai_processed_at?: string | null
   created_at?: string | null
   updated_at?: string | null
 }

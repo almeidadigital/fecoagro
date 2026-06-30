@@ -1,8 +1,9 @@
 {
   "_versions": {
-    "chat-agent": 6,
+    "chat-agent": 7,
     "welcome-email": 5,
-    "process-pdf": 10,
-    "generate-pdf": 4
+    "process-pdf": 11,
+    "generate-pdf": 4,
+    "ai-reconcile": 1
   }
 }

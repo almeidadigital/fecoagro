@@ -8,6 +8,7 @@ import {
   Link2,
   Search,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { PdfImportModal } from '@/components/pdf/PdfImportModal'
 import { ReconciliationSheet } from '@/components/ReconciliationSheet'
+import { AIReconcilePanel } from '@/components/AIReconcilePanel'
 import { PdfExportButton } from '@/components/PdfExportButton'
 import { ColumnVisibility } from '@/components/ColumnVisibility'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
@@ -283,6 +285,13 @@ export default function Extratos() {
             </div>
           )}
 
+          {selectedBanco && (
+            <AIReconcilePanel
+              bancoId={selectedBancoId}
+              onReconciled={loadExtratos}
+            />
+          )}
+
           <Card className="rounded-xl border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold flex items-center justify-between">
@@ -376,16 +385,27 @@ export default function Extratos() {
                           )}
                           {visibleColumns.reconciled && (
                             <TableCell className="text-center">
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  e.reconciled
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-amber-100 text-amber-700',
-                                )}
-                              >
-                                {e.reconciled ? 'Reconciliado' : 'Pendente'}
-                              </Badge>
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    e.reconciled
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-amber-100 text-amber-700',
+                                  )}
+                                >
+                                  {e.reconciled ? 'Reconciliado' : 'Pendente'}
+                                </Badge>
+                                {e.ai_confidence != null &&
+                                  e.ai_confidence >= 0.9 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-purple-100 text-purple-700"
+                                    >
+                                      <Sparkles className="w-3 h-3 mr-1" /> IA
+                                    </Badge>
+                                  )}
+                              </div>
                             </TableCell>
                           )}
                           <TableCell className="text-center">
@@ -426,6 +446,7 @@ export default function Extratos() {
         open={pdfOpen}
         onOpenChange={setPdfOpen}
         entityType="extratos_bancarios"
+        bancoId={selectedBancoId || undefined}
         onSuccess={loadExtratos}
       />
     </div>

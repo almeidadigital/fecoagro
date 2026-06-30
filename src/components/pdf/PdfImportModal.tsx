@@ -20,6 +20,7 @@ interface PdfImportModalProps {
   onOpenChange: (open: boolean) => void
   entityType: EntityType
   onSuccess: () => void
+  bancoId?: number
 }
 
 export function PdfImportModal({
@@ -27,6 +28,7 @@ export function PdfImportModal({
   onOpenChange,
   entityType,
   onSuccess,
+  bancoId,
 }: PdfImportModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -48,7 +50,7 @@ export function PdfImportModal({
       toast.info('Enviando arquivo...')
       const { path } = await uploadPdf(file, entityType)
       toast.info('Processando PDF...')
-      const result = await processPdf(path, entityType)
+      const result = await processPdf(path, entityType, bancoId)
       toast.success(
         `${result.recordsInserted} registro(s) importado(s) com sucesso!`,
       )
@@ -73,6 +75,7 @@ export function PdfImportModal({
     centro_custos: 'Centro de Custos',
     atividades: 'Atividades',
     plano_contas: 'Plano de Contas',
+    extratos_bancarios: 'Extratos Bancários',
   }
 
   return (
