@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
@@ -37,6 +37,7 @@ import {
 import { filialOptions } from '@/lib/filial-format'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import { balanceteService, BalanceteData } from '@/services/balanceteService'
+import { flattenTree, getDCIndicator } from '@/lib/account-utils'
 import { Filial } from '@/lib/types'
 import { toast } from 'sonner'
 
@@ -55,6 +56,7 @@ const Balancete = () => {
   const [filiais, setFiliais] = useState<Filial[]>([])
   const [data, setData] = useState<BalanceteData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [maxLevel, setMaxLevel] = useState<string>('all')
 
   useEffect(() => {
     auxiliaryService
@@ -85,18 +87,31 @@ const Balancete = () => {
     loadData()
   }, [loadData])
 
+  const flatNodes = useMemo(() => {
+    if (!data) return []
+    return flattenTree(data.tree, maxLevel === 'all' ? 'all' : Number(maxLevel))
+  }, [data, maxLevel])
+
   const handleExportCsv = () => {
-    if (!data || data.items.length === 0) {
+    if (!data || flatNodes.length === 0) {
       toast.error('Nenhum dado para exportar')
       return
     }
-    const headers = ['Classificação', 'Descrição', 'Débito', 'Crédito', 'Saldo']
-    const rows = data.items.map((item) => [
-      item.classificacao,
-      item.descricao,
-      formatCurrencyNumber(item.debito),
-      formatCurrencyNumber(item.credito),
-      formatCurrencyNumber(item.saldo),
+    const headers = [
+      'Classificação',
+      'Descrição',
+      'Débito',
+      'Crédito',
+      'Saldo',
+      'D/C',
+    ]
+    const rows = flatNodes.map((n) => [
+      n.classificacao,
+      n.descricao,
+      formatCurrencyNumber(n.debito),
+      formatCurrencyNumber(n.credito),
+      formatCurrencyNumber(n.saldo),
+      getDCIndicator(n.debito, n.credito),
     ])
     rows.push([
       '',
@@ -104,27 +119,26 @@ const Balancete = () => {
       formatCurrencyNumber(data.totalDebito),
       formatCurrencyNumber(data.totalCredito),
       formatCurrencyNumber(data.totalSaldo),
+      '',
     ])
     exportToCsv(buildExportFilename('balancete'), headers, rows)
     toast.success('CSV exportado com sucesso')
   }
 
-  const pdfData = data
-    ? data.items.map((item) => ({
-        classificacao: item.classificacao,
-        descricao: item.descricao,
-        debito: formatCurrencyNumber(item.debito),
-        credito: formatCurrencyNumber(item.credito),
-        saldo: formatCurrencyNumber(item.saldo),
-      }))
-    : []
+  const pdfData = flatNodes.map((n) => ({
+    classificacao: n.classificacao,
+    descricao: n.descricao,
+    debito: formatCurrencyNumber(n.debito),
+    credito: formatCurrencyNumber(n.credito),
+    saldo: formatCurrencyNumber(n.saldo),
+  }))
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Balancete</h1>
-          <p className="text-gray-500">Balancete de Verificação por conta</p>
+          <p className="text-gray-500">Balancete de Verificação hierárquico</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <PdfExportButton
@@ -137,7 +151,7 @@ const Balancete = () => {
               { header: 'Saldo', key: 'saldo' },
             ]}
             data={pdfData}
-            disabled={loading || !data || data.items.length === 0}
+            disabled={loading || !data || flatNodes.length === 0}
           />
           <Button
             variant="outline"
@@ -148,7 +162,6 @@ const Balancete = () => {
           </Button>
         </div>
       </div>
-
       <div className="flex flex-col md:flex-row gap-4 flex-wrap">
         <Select value={filialId} onValueChange={setFilialId}>
           <SelectTrigger className="w-full md:w-[220px] bg-white">
@@ -159,6 +172,19 @@ const Balancete = () => {
             {filialOptions(filiais).map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={maxLevel} onValueChange={setMaxLevel}>
+          <SelectTrigger className="w-full md:w-[180px] bg-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os níveis</SelectItem>
+            {[1, 2, 3, 4, 5].map((l) => (
+              <SelectItem key={l} value={String(l)}>
+                Nível {l}
               </SelectItem>
             ))}
           </SelectContent>
@@ -200,10 +226,9 @@ const Balancete = () => {
           </PopoverContent>
         </Popover>
       </div>
-
       {loading ? (
         <Skeleton className="h-[400px] rounded-3xl" />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data || flatNodes.length === 0 ? (
         <Card className="rounded-3xl border-none shadow-sm">
           <CardContent className="py-12 text-center text-gray-500">
             Nenhum dado encontrado para o período selecionado.
@@ -220,29 +245,50 @@ const Balancete = () => {
                   <TableHead className="text-right">Débito</TableHead>
                   <TableHead className="text-right">Crédito</TableHead>
                   <TableHead className="text-right">Saldo</TableHead>
+                  <TableHead className="w-[40px] text-center">D/C</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((item, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-mono text-sm font-semibold text-gray-900">
-                      {item.classificacao}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {item.descricao}
-                    </TableCell>
-                    <TableCell className="text-right text-red-600 font-medium">
-                      {item.debito > 0 ? formatCurrency(item.debito) : '-'}
-                    </TableCell>
-                    <TableCell className="text-right text-green-600 font-medium">
-                      {item.credito > 0 ? formatCurrency(item.credito) : '-'}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-gray-900">
-                      {formatCurrency(item.saldo)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-gray-50 font-bold">
+                {flatNodes.map((node) => {
+                  const isRoot = node.level === 1
+                  const dc = getDCIndicator(node.debito, node.credito)
+                  return (
+                    <TableRow
+                      key={node.classificacao}
+                      className={cn(isRoot && 'bg-gray-50/80 font-bold')}
+                    >
+                      <TableCell
+                        className="font-mono text-sm font-semibold text-gray-900"
+                        style={{
+                          paddingLeft: `${(node.level - 1) * 20 + 12}px`,
+                        }}
+                      >
+                        {node.classificacao}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'text-gray-600',
+                          isRoot && 'uppercase text-gray-900',
+                        )}
+                      >
+                        {node.descricao}
+                      </TableCell>
+                      <TableCell className="text-right text-red-600 font-medium">
+                        {node.debito > 0 ? formatCurrency(node.debito) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600 font-medium">
+                        {node.credito > 0 ? formatCurrency(node.credito) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-gray-900">
+                        {formatCurrency(node.saldo)}
+                      </TableCell>
+                      <TableCell className="text-center font-bold">
+                        {dc}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                <TableRow className="bg-gray-100 font-bold">
                   <TableCell colSpan={2} className="text-gray-900">
                     TOTAL
                   </TableCell>
@@ -255,6 +301,7 @@ const Balancete = () => {
                   <TableCell className="text-right text-gray-900">
                     {formatCurrency(data.totalSaldo)}
                   </TableCell>
+                  <TableCell />
                 </TableRow>
               </TableBody>
             </Table>

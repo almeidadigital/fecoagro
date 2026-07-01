@@ -67,6 +67,7 @@ export interface PlanoConta {
   classificacao: string
   descricao: string
   tipo: 'analitica' | 'sintetica'
+  natureza?: string | null
   created_at?: string | null
   updated_at?: string | null
 }

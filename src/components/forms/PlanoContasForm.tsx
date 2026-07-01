@@ -30,12 +30,14 @@ import {
 } from '@/components/ui/select'
 import { PlanoConta } from '@/lib/types'
 import { createRecord, updateRecord } from '@/services/crudService'
+import { suggestNatureza } from '@/lib/account-utils'
 import { toast } from 'sonner'
 
 const schema = z.object({
   classificacao: z.string().min(1, 'Classificação é obrigatória'),
   descricao: z.string().min(2, 'Descrição é obrigatória'),
   tipo: z.enum(['analitica', 'sintetica']),
+  natureza: z.enum(['Devedora', 'Credora']),
 })
 
 interface Props {
@@ -55,16 +57,43 @@ export function PlanoContasForm({
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { classificacao: '', descricao: '', tipo: 'analitica' },
+    defaultValues: {
+      classificacao: '',
+      descricao: '',
+      tipo: 'analitica',
+      natureza: 'Devedora',
+    },
   })
 
+  const watchedClassificacao = form.watch('classificacao')
+
   useEffect(() => {
-    form.reset({
-      classificacao: editItem?.classificacao || '',
-      descricao: editItem?.descricao || '',
-      tipo: (editItem?.tipo as 'analitica' | 'sintetica') || 'analitica',
-    })
+    if (editItem) {
+      const suggested = suggestNatureza(editItem.classificacao || '')
+      form.reset({
+        classificacao: editItem.classificacao || '',
+        descricao: editItem.descricao || '',
+        tipo: (editItem.tipo as 'analitica' | 'sintetica') || 'analitica',
+        natureza:
+          (editItem.natureza as 'Devedora' | 'Credora') ||
+          ((suggested || 'Devedora') as 'Devedora' | 'Credora'),
+      })
+    } else {
+      form.reset({
+        classificacao: '',
+        descricao: '',
+        tipo: 'analitica',
+        natureza: 'Devedora',
+      })
+    }
   }, [editItem, form, open])
+
+  useEffect(() => {
+    const suggested = suggestNatureza(watchedClassificacao)
+    if (suggested) {
+      form.setValue('natureza', suggested)
+    }
+  }, [watchedClassificacao, form])
 
   async function onSubmit(values: z.infer<typeof schema>) {
     try {
@@ -73,13 +102,7 @@ export function PlanoContasForm({
         await updateRecord('plano_contas', editItem.id, values)
         toast.success('Conta atualizada')
       } else {
-        const { id, ...insertValues } = values as {
-          id?: number
-          classificacao: string
-          descricao: string
-          tipo: string
-        }
-        await createRecord('plano_contas', insertValues)
+        await createRecord('plano_contas', values)
         toast.success('Conta criada')
       }
       onOpenChange(false)
@@ -143,6 +166,27 @@ export function PlanoContasForm({
                     <SelectContent>
                       <SelectItem value="analitica">Analítica</SelectItem>
                       <SelectItem value="sintetica">Sintética</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="natureza"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Natureza (auto-sugerida)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Devedora">Devedora</SelectItem>
+                      <SelectItem value="Credora">Credora</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

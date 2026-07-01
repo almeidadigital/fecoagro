@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -46,6 +46,7 @@ import {
   notaFiscalOptions,
 } from '@/lib/relational-format'
 import { filialOptions } from '@/lib/filial-format'
+import { isAnalyticalAccount } from '@/lib/account-utils'
 
 const schema = z.object({
   date: z.string().min(1, 'Data é obrigatória'),
@@ -84,6 +85,13 @@ export function TransactionForm({
   filiais,
 }: Props) {
   const [submitting, setSubmitting] = useState(false)
+
+  const analyticalPlanoContas = useMemo(() => {
+    const allClassifications = planoContas.map((p) => p.classificacao ?? '')
+    return planoContas.filter((p) =>
+      isAnalyticalAccount(p.classificacao ?? '', allClassifications),
+    )
+  }, [planoContas])
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -322,7 +330,7 @@ export function TransactionForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {planoContaOptions(planoContas).map((opt) => (
+                      {planoContaOptions(analyticalPlanoContas).map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>

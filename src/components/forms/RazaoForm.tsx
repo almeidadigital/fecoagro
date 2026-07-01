@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -34,6 +34,7 @@ import { auxiliaryService } from '@/services/auxiliaryService'
 import { toast } from 'sonner'
 import { filialOptions } from '@/lib/filial-format'
 import { atividadeOptions, centroCustoOptions } from '@/lib/relational-format'
+import { isAnalyticalAccount } from '@/lib/account-utils'
 
 const schema = z.object({
   data: z.string().min(1, 'Data é obrigatória'),
@@ -82,6 +83,13 @@ export function RazaoForm({
       .then(setCentroCustos)
       .catch(() => {})
   }, [])
+
+  const analyticalPlanoContas = useMemo(() => {
+    const allClassifications = planoContas.map((p) => p.classificacao ?? '')
+    return planoContas.filter((p) =>
+      isAnalyticalAccount(p.classificacao ?? '', allClassifications),
+    )
+  }, [planoContas])
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -203,7 +211,7 @@ export function RazaoForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {planoContas.map((pc) => (
+                      {analyticalPlanoContas.map((pc) => (
                         <SelectItem key={pc.id} value={String(pc.id)}>
                           {pc.id} - {pc.descricao}
                         </SelectItem>

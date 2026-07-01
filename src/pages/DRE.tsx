@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
@@ -37,6 +37,7 @@ import {
 import { filialOptions } from '@/lib/filial-format'
 import { auxiliaryService } from '@/services/auxiliaryService'
 import { dreService, DREData } from '@/services/dreService'
+import { flattenTree, FinancialTreeNode } from '@/lib/account-utils'
 import { Filial } from '@/lib/types'
 import { toast } from 'sonner'
 
@@ -55,6 +56,7 @@ const DRE = () => {
   const [filiais, setFiliais] = useState<Filial[]>([])
   const [data, setData] = useState<DREData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [maxLevel, setMaxLevel] = useState<string>('all')
 
   useEffect(() => {
     auxiliaryService
@@ -85,6 +87,16 @@ const DRE = () => {
     loadData()
   }, [loadData])
 
+  const levelNum = maxLevel === 'all' ? 'all' : Number(maxLevel)
+  const receitasFlat = useMemo(
+    () => (data ? flattenTree(data.receitasTree, levelNum) : []),
+    [data, maxLevel],
+  )
+  const despesasFlat = useMemo(
+    () => (data ? flattenTree(data.despesasTree, levelNum) : []),
+    [data, maxLevel],
+  )
+
   const handleExportCsv = () => {
     if (!data) {
       toast.error('Nenhum dado para exportar')
@@ -92,12 +104,12 @@ const DRE = () => {
     }
     const headers = ['Tipo', 'Classificação', 'Descrição', 'Valor']
     const rows: (string | number)[][] = []
-    data.receitas.forEach((r) =>
+    receitasFlat.forEach((n) =>
       rows.push([
         'Receita',
-        r.classificacao,
-        r.descricao,
-        formatCurrencyNumber(r.valor),
+        n.classificacao,
+        n.descricao,
+        formatCurrencyNumber(n.saldo),
       ]),
     )
     rows.push([
@@ -106,12 +118,12 @@ const DRE = () => {
       'Total Receitas',
       formatCurrencyNumber(data.totalReceitas),
     ])
-    data.despesas.forEach((d) =>
+    despesasFlat.forEach((n) =>
       rows.push([
         'Despesa',
-        d.classificacao,
-        d.descricao,
-        formatCurrencyNumber(d.valor),
+        n.classificacao,
+        n.descricao,
+        formatCurrencyNumber(-n.saldo),
       ]),
     )
     rows.push([
@@ -130,22 +142,52 @@ const DRE = () => {
     toast.success('CSV exportado com sucesso')
   }
 
-  const pdfData = data
-    ? [
-        ...data.receitas.map((r) => ({
-          tipo: 'Receita',
-          classificacao: r.classificacao,
-          descricao: r.descricao,
-          valor: formatCurrencyNumber(r.valor),
-        })),
-        ...data.despesas.map((d) => ({
-          tipo: 'Despesa',
-          classificacao: d.classificacao,
-          descricao: d.descricao,
-          valor: formatCurrencyNumber(d.valor),
-        })),
-      ]
-    : []
+  const pdfData = [
+    ...receitasFlat.map((n) => ({
+      tipo: 'Receita',
+      classificacao: n.classificacao,
+      descricao: n.descricao,
+      valor: formatCurrencyNumber(n.saldo),
+    })),
+    ...despesasFlat.map((n) => ({
+      tipo: 'Despesa',
+      classificacao: n.classificacao,
+      descricao: n.descricao,
+      valor: formatCurrencyNumber(-n.saldo),
+    })),
+  ]
+
+  const renderRows = (nodes: FinancialTreeNode[], isDespesa: boolean) =>
+    nodes.map((node) => {
+      const isRoot = node.level === 1
+      const valor = isDespesa ? -node.saldo : node.saldo
+      return (
+        <TableRow
+          key={`${isDespesa ? 'd' : 'r'}-${node.classificacao}`}
+          className={cn(isRoot && 'font-bold')}
+        >
+          <TableCell
+            className="font-mono text-sm"
+            style={{ paddingLeft: `${(node.level - 1) * 20 + 12}px` }}
+          >
+            {node.classificacao}
+          </TableCell>
+          <TableCell
+            className={cn('text-gray-600', isRoot && 'uppercase text-gray-900')}
+          >
+            {node.descricao}
+          </TableCell>
+          <TableCell
+            className={cn(
+              'text-right font-medium',
+              isDespesa ? 'text-red-600' : 'text-green-600',
+            )}
+          >
+            {formatCurrency(valor)}
+          </TableCell>
+        </TableRow>
+      )
+    })
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in pb-10">
@@ -177,7 +219,6 @@ const DRE = () => {
           </Button>
         </div>
       </div>
-
       <div className="flex flex-col md:flex-row gap-4 flex-wrap">
         <Select value={filialId} onValueChange={setFilialId}>
           <SelectTrigger className="w-full md:w-[220px] bg-white">
@@ -188,6 +229,19 @@ const DRE = () => {
             {filialOptions(filiais).map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={maxLevel} onValueChange={setMaxLevel}>
+          <SelectTrigger className="w-full md:w-[180px] bg-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os níveis</SelectItem>
+            {[1, 2, 3, 4, 5].map((l) => (
+              <SelectItem key={l} value={String(l)}>
+                Nível {l}
               </SelectItem>
             ))}
           </SelectContent>
@@ -229,11 +283,9 @@ const DRE = () => {
           </PopoverContent>
         </Popover>
       </div>
-
       {loading ? (
         <Skeleton className="h-[400px] rounded-3xl" />
-      ) : !data ||
-        (data.receitas.length === 0 && data.despesas.length === 0) ? (
+      ) : !data || (receitasFlat.length === 0 && despesasFlat.length === 0) ? (
         <Card className="rounded-3xl border-none shadow-sm">
           <CardContent className="py-12 text-center text-gray-500">
             Nenhum dado encontrado para o período selecionado.
@@ -256,19 +308,7 @@ const DRE = () => {
                     RECEITAS
                   </TableCell>
                 </TableRow>
-                {data.receitas.map((item, i) => (
-                  <TableRow key={`r-${i}`}>
-                    <TableCell className="font-mono text-sm">
-                      {item.classificacao}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {item.descricao}
-                    </TableCell>
-                    <TableCell className="text-right text-green-600 font-medium">
-                      {formatCurrency(item.valor)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {renderRows(receitasFlat, false)}
                 <TableRow className="bg-green-50 font-bold">
                   <TableCell colSpan={2} className="text-green-700">
                     Total Receitas
@@ -282,19 +322,7 @@ const DRE = () => {
                     DESPESAS
                   </TableCell>
                 </TableRow>
-                {data.despesas.map((item, i) => (
-                  <TableRow key={`d-${i}`}>
-                    <TableCell className="font-mono text-sm">
-                      {item.classificacao}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {item.descricao}
-                    </TableCell>
-                    <TableCell className="text-right text-red-600 font-medium">
-                      {formatCurrency(item.valor)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {renderRows(despesasFlat, true)}
                 <TableRow className="bg-red-50 font-bold">
                   <TableCell colSpan={2} className="text-red-700">
                     Total Despesas
