@@ -9,6 +9,7 @@ import {
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { Role } from '@/lib/types'
+import { isInvalidTokenError, clearStaleSession } from '@/lib/auth-utils'
 
 interface AuthContextType {
   user: User | null
@@ -110,10 +111,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true
 
+    const handleSessionError = async (error: unknown) => {
+      if (isInvalidTokenError(error)) {
+        await clearStaleSession()
+        try {
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch {
+          // ignore signout errors
+        }
+      }
+      if (mounted) {
+        setSession(null)
+        setUser(null)
+        setRole(null)
+        setAvatarUrl(null)
+        setFullName(null)
+        setLoading(false)
+        userIdRef.current = null
+      }
+    }
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
+
+      if (event === 'SIGNED_OUT' || !session) {
+        setSession(null)
+        setUser(null)
+        setRole(null)
+        setAvatarUrl(null)
+        setFullName(null)
+        setLoading(false)
+        userIdRef.current = null
+        return
+      }
 
       setSession(session)
       const newUser = session?.user ?? null
@@ -132,19 +164,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(newUser)
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (!mounted) return
 
-      setSession(session)
-      const newUser = session?.user ?? null
+        if (error) {
+          handleSessionError(error)
+          return
+        }
 
-      if (newUser) {
-        userIdRef.current = newUser.id
-      } else {
-        setLoading(false)
-      }
-      setUser(newUser)
-    })
+        setSession(session)
+        const newUser = session?.user ?? null
+
+        if (newUser) {
+          userIdRef.current = newUser.id
+        } else {
+          setLoading(false)
+        }
+        setUser(newUser)
+      })
+      .catch((err) => {
+        handleSessionError(err)
+      })
 
     return () => {
       mounted = false

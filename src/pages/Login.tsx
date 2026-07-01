@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { isInvalidTokenError, clearStaleSession } from '@/lib/auth-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { FecoagroLogo } from '@/components/FecoagroLogo'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -23,6 +25,23 @@ export default function Login() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    const cleanupStaleSession = async () => {
+      try {
+        const { error } = await supabase.auth.getSession()
+        if (error && isInvalidTokenError(error)) {
+          await clearStaleSession()
+          await supabase.auth.signOut({ scope: 'local' })
+        }
+      } catch (err) {
+        if (isInvalidTokenError(err)) {
+          await clearStaleSession()
+        }
+      }
+    }
+    cleanupStaleSession()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -30,12 +49,18 @@ export default function Login() {
     try {
       const { error } = await signIn(email, password)
       if (error) {
+        if (isInvalidTokenError(error)) {
+          await clearStaleSession()
+        }
         toast.error('Erro ao entrar. Verifique suas credenciais.')
       } else {
         toast.success('Login realizado com sucesso!')
         navigate('/')
       }
-    } catch {
+    } catch (err) {
+      if (isInvalidTokenError(err)) {
+        await clearStaleSession()
+      }
       toast.error('Ocorreu um erro inesperado.')
     } finally {
       setIsLoading(false)

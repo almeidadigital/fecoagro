@@ -24,48 +24,51 @@ import DRE from './pages/DRE'
 import { TransactionProvider } from '@/stores/useTransactionStore'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AuthErrorBoundary } from '@/components/AuthErrorBoundary'
 
 const App = () => (
   <BrowserRouter
     future={{ v7_startTransition: false, v7_relativeSplatPath: false }}
   >
-    <AuthProvider>
-      <TransactionProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+    <AuthErrorBoundary>
+      <AuthProvider>
+        <TransactionProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Index />} />
-                <Route
-                  path="/dashboard-executivo"
-                  element={<DashboardExecutivo />}
-                />
-                <Route path="/critica" element={<Critica />} />
-                <Route path="/notas-fiscais" element={<NotasFiscais />} />
-                <Route path="/razao" element={<Razao />} />
-                <Route path="/bancos" element={<Bancos />} />
-                <Route path="/plano-contas" element={<PlanoContas />} />
-                <Route path="/atividades" element={<Atividades />} />
-                <Route path="/centro-custos" element={<CentroCustos />} />
-                <Route path="/extratos" element={<Extratos />} />
-                <Route path="/balancete" element={<Balancete />} />
-                <Route path="/dre" element={<DRE />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/help" element={<Help />} />
-                <Route path="/users" element={<Users />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route
+                    path="/dashboard-executivo"
+                    element={<DashboardExecutivo />}
+                  />
+                  <Route path="/critica" element={<Critica />} />
+                  <Route path="/notas-fiscais" element={<NotasFiscais />} />
+                  <Route path="/razao" element={<Razao />} />
+                  <Route path="/bancos" element={<Bancos />} />
+                  <Route path="/plano-contas" element={<PlanoContas />} />
+                  <Route path="/atividades" element={<Atividades />} />
+                  <Route path="/centro-custos" element={<CentroCustos />} />
+                  <Route path="/extratos" element={<Extratos />} />
+                  <Route path="/balancete" element={<Balancete />} />
+                  <Route path="/dre" element={<DRE />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/help" element={<Help />} />
+                  <Route path="/users" element={<Users />} />
+                </Route>
               </Route>
-            </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </TransactionProvider>
-    </AuthProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </TransactionProvider>
+      </AuthProvider>
+    </AuthErrorBoundary>
   </BrowserRouter>
 )
 
